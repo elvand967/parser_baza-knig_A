@@ -1,0 +1,11 @@
+Запуск в консоли win
+*****************************************
+1) C:\Users\User>
+		D:\Python\myProject\parser_baza-knig\venv\Scripts\activate
+
+2.1) 		python D:\Python\myProject\parser_baza-knig\module2_console.py
+
+или 
+
+2.2) 		python D:\Python\myProject\parser_baza-knig\module2_console.py 1 5
+*****************************************
