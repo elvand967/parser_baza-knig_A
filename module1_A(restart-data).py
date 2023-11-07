@@ -1,5 +1,19 @@
 # D:\Python\myProject\parser_baza-knig_A\modul0db_A.py
 
+'''
+Данный модуль разработан для загрузки из book_database.json в БД первичных данных
+[
+    {
+        "id": 1,
+        "title": "Не считая собаки",
+        "link": "https://baza-knig.ink/popadancy/8-uillis-konni-ne-schitaya-sobaki.html"
+    },
+    ...
+]
+загруженных в начале раработки
+'''
+
+
 import sqlite3
 import json
 
