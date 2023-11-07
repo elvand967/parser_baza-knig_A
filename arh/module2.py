@@ -57,7 +57,7 @@ def parser_description(soup):
     if div_short_text:
         description = div_short_text.get_text()
 
-        # Редактируем описание с помощью регулярных выражений import re
+        # Редактируем описание с помощью регулярных выражений Get re
         # Удаление всего, начиная с первого символа "\n" и после
         description = re.sub(r'\n.*', '', description)
 

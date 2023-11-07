@@ -8,13 +8,13 @@ URL которых полученны по ключу "link" из приняты
 не будем излишне заморачиваться с директориями и именами файлов.
 
 В проекте создадим директории:
- - "JSONfiles/import" - размещены *.json файлы источники URL
+ - "JSONfiles/Get" - размещены *.json файлы источники URL
     - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_no.json"
 
- - "JSONfiles/export" - размещены *.json обновленные файлы с информацией о именах загруженных торрентов
+ - "JSONfiles/Set" - размещены *.json обновленные файлы с информацией о именах загруженных торрентов
     - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_ThereIs.json"
 
-Далее при запуске модуля будет формироваться список с именами файлов из директории "JSONfiles/import"
+Далее при запуске модуля будет формироваться список с именами файлов из директории "JSONfiles/Get"
 Нужно выбрать индекс файла источника ввести его для дальнейшей работы модуля
 
 В среднем планируется формировать *.json файлы источники объемом 1000-1300 словарей
@@ -54,69 +54,61 @@ def main():
     MY_LOG += "json_download-torrent"
 
     # Определим рабочие директории
-    dir_import ="JSONfiles\import"
-    dir_export = "JSONfiles\export"
+    dir_Get ="JSONfiles\Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
+    dir_Set = "JSONfiles\Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
 
     my_print(MY_LOG, 'Для работы модуля: module2_A(json_download-torrent).py')
 
     # Выберем файл для обработки при помощи функции 'select_file(dir_import, MY_LOG)'
-    file_json_import = select_file(dir_import, MY_LOG)
+    file_json_Get = select_file(dir_Get, MY_LOG)
 
     # Если нажата клавиша "Esc" выходим из функции
-    if file_json_import is None:
+    if file_json_Get is None:
         return  # Выход из функции
 
 
     # Получим содержимое исходного JSON-файла в виде списка словарей
-    list_dict_json_import = read_json_file(dir_import, file_json_import)
-    my_print(MY_LOG, f'\nКоличество элементов в {file_json_import}: [{len(list_dict_json_import)}]')
+    list_dict_json_Get = read_json_file(dir_Get, file_json_Get)
 
-    # Генерируем имя JSON-файл "file_json_export" из имени "file_json_import",
-    # удалив из него постфикс из 3-х символов
-    file_json_export = remove_replace_postfix(file_json_import, '_no', '_ThereIs' )
+    # Генерируем имя JSON-файл "file_json_Set" из имени "file_json_Get",
+    # Заменив у него постфикс '_no' на '_There_Is'
+    file_json_Set = remove_replace_postfix(file_json_Get, '_no', '_There_Is')
 
     # Получим содержимое итогового JSON-файла в виде списка словарей
-    list_dict_json_export = read_json_file(dir_export, file_json_export)
-    my_print(MY_LOG, f'Количество элементов в {file_json_export}: [{len(list_dict_json_export)}]')
+    list_dict_json_Set = read_json_file(dir_Set, file_json_Set)
+    my_print(MY_LOG, f'\nКоличество элементов в {file_json_Set}: {len(list_dict_json_Set)}')
+    my_print(MY_LOG, f'Количество элементов в {file_json_Get}: {len(list_dict_json_Get)}\n')
+
+    # Зададим диапозон обрабатываемых элементов списка
+    # от 'start_index' до 'end_index' включая границы
+    flag = True
+    max_index = len(list_dict_json_Get)-1
+    while flag:
+        start_index = int(input("Индекс при старте: "))
+        end_index = int(input("Индекс на финише:  "))
+
+        if end_index < start_index or end_index > max_index or start_index > max_index:
+            my_print(MY_LOG, f'Установлено недопустимое соотношение индексов,\n'
+                             f'или указан несуществыющий индекс из допустимых ([0]->[{max_index}]):\n'
+                             f'start_index[{start_index}] -> end_index[{end_index}]')
+            continuation = input("Введите 'S' для повторного ввода или любой другой символ для Выхода из программы: ")
+            if continuation == 'S' or continuation == 's' or continuation == 'Ы' or continuation == 'ы':
+                continue
+            else:
+                return
+        flag = False
+
+    my_print(MY_LOG, f'Установлен диапозон обработки словарей {file_json_Get} [{start_index}] -> [{end_index}]')
+
+    # Выберем интересующий нас диапозон списка
+    filtered_items = islice(list_dict_json_Get, start_index, end_index+1)
+
+    # Засекаем начало времени работы кода
+    start_time_pars = time.time()
+    formatted_start_time = datetime.fromtimestamp(start_time_pars).strftime("%Y.%m.%d %H:%M")
+    my_print(MY_LOG, f'Время начала загрузки торрент-файлов: {formatted_start_time}')
 
 
-
-
-    #1
-    # # Путь к директории результатов анализа
-    # dirJSONtotal = "JSONtotal"
-    #
-    # # Источник словарей (ссылок)
-    # source_json = 'book_database3.json'
-    #
-    # # Сохраняем результат обработки
-    # result_json = 'book_database_total.json'
-    #
-    # # Проверяем, существует ли "JSONtotal" - директория, для сохранения результатов,
-    # # и создаем её, если она не существует
-    # if not os.path.exists(dirJSONtotal):
-    #     os.makedirs(dirJSONtotal)
-    #     print(f'Требуемая директория {dirJSONtotal}, была вновь создада.\n JSON-файлы отсутствуют.\n Работа кода остановлена')
-    #     return
-    #
-
-    #
-
-    #
-    # # Зададим диапозон обрабатываемых элементов списка
-    # # от 'start_index' до 'end_index' включая границы
-    # start_index = int(input("Первый индекс при старте: "))
-    # end_index = int(input("Индекс на финише: "))
-    # if end_index < start_index:
-    #     end_index = start_index
-    #
-    # # Выберем интересующий нас диапозон списка
-    # filtered_items = islice(json_files_notTorrent, start_index, end_index+1)
-    #
-    # # Засекаем начало времени работы кода
-    # start_time_pars = time.time()
-    #
-    # print(f'Старт загрузки торрент-файлов.\nДиапозона словарей от {start_index} до {end_index} (включительно).\n' )
     #
     # for i, item in enumerate(filtered_items):
     #     page_url = item["link"]
@@ -213,27 +205,6 @@ def download_torrent_file(url):
         driver.quit()
         return "Ошибка"
 
-
-# '''
-# Функция read_json_file(file_path) попытается открыть и прочитать JSON файл по указанному пути
-# и вернет его содержимое в виде словаря.
-# Если файл не будет найден Функция создаст его,
-# Если произойдет ошибка при декодировании JSON - функция вернет None.
-# '''
-# def read_json_file(file_path):
-#     try:
-#         with open(file_path, 'r', encoding='utf-8') as file:
-#             data = json.load(file)
-#         return data
-#     except FileNotFoundError:
-#         print(f"Файл {file_path} - не найден.\nСоздан новый файл {file_path}.")
-#         data = []
-#         with open(file_path, 'w', encoding='utf-8') as file:
-#             json.dump(data, file, ensure_ascii=False, indent=4)
-#         return data
-#     except json.JSONDecodeError:
-#         print(f"Ошибка при декодировании JSON файла: {file_path}")
-#         return None
 
 
 # '''

@@ -1,8 +1,8 @@
 import sqlite3
 import json
 
-json_file_imp = "JSONfiles/import/book_database_total.json"
-imp_path = "JSONfiles/import/" + json_file_imp
+json_file_imp = "JSONfiles/Get/book_database_total.json"
+imp_path = "JSONfiles/Get/" + json_file_imp
 
 # Открываем JSON-файл и загружаем данные
 with open(imp_path, "r", encoding="utf-8") as json_file:

@@ -5,6 +5,8 @@ import keyboard  # Импортируем модуль keyboard
 import re
 
 
+# Функция работает в режиме вывода сообщенией в окне терминала
+# и вместе с тем регистрирует все сообщения в текстовом файле
 # Пример использования функции
 # my_print("my_log", "Это текст для записи в лог-файл.")
 def my_print(name, text):
@@ -38,43 +40,24 @@ def my_print(name, text):
 
 # Функция принимает путь к директории и возвращает список имеющихся в ней файлов
 # В случае ошибки возращает пустой список и сообщение о ошибке
-def get_files_in_directory(dir_import):
+def get_files_in_directory(dir_path):
     try:
-        file_list = os.listdir(dir_import)
+        file_list = os.listdir(dir_path)
         return file_list
     except Exception as e:
         my_print(f"An error occurred/Произошла ошибка:\n{e}")
         return []
 
 
-# Функция выбора файла из директории
-# def select_file(dir_import, MY_LOG):
-#     files = get_files_in_directory(dir_import)
-#
-#     my_print(MY_LOG, "доступны файлы:")
-#     for i, file in enumerate(files):
-#         my_print(MY_LOG, f"{i}: {file}")
-#
-#     my_print(MY_LOG, "\nДля выбора введите индекс файла или нажмите 'Esc' для выхода:")
-#
-#     while True:
-#         try:
-#             key_event = keyboard.read_event()
-#             if key_event.event_type == keyboard.KEY_DOWN:
-#                 if key_event.name == 'esc':
-#                     my_print(MY_LOG, "Нажата клавиша 'Esc', выходим из программы.")
-#                     return None
-#                 elif key_event.event_type == keyboard.KEY_DOWN and key_event.name.isnumeric():
-#                     i = int(key_event.name)
-#                     if 0 <= i < len(files):
-#                         file_json_import = files[i]
-#                         my_print(MY_LOG, f'Выбран: {file_json_import}')
-#                         return file_json_import
-#         except keyboard.read_event():
-#             pass
-
-def select_file(dir_import, MY_LOG):
-    files = get_files_in_directory(dir_import)
+# Функция select_file() получив список файлов
+# находящихся в заданной директории при помощи функции get_files_in_directory()
+# предоставляет пользователю выбора требуемого файла путем ввода индекса
+# списока имеющихся в ней файлов
+# Возвращает имя выбранного файла
+# Предусмотрена обработка ошибок ввода несуществующего индекса
+# так-же остановка работы кода путем нажатия клавиши 'Esc'
+def select_file(dir_path, MY_LOG):
+    files = get_files_in_directory(dir_path)
 
     my_print(MY_LOG, "доступны файлы:")
     for i, file in enumerate(files):
@@ -104,7 +87,7 @@ def select_file(dir_import, MY_LOG):
 
 
 
-# Функция изменяет или добовляет постфиксы в имена файлов
+# Функция изменяет части имен файлов или добовляет постфиксы в имена файлов
 def remove_replace_postfix(file_name, text, new_text=''):
     if text is not None:
         # Заменить или удалить совпадающий текст
@@ -118,28 +101,10 @@ def remove_replace_postfix(file_name, text, new_text=''):
         return base_name + new_text + extension
 
 
-# Функция принимает путь директории, имя JSON-файла
-# в возвращает его содержимое в виде списка элементов JSON-файла.
-# Если принятой директории или файла нет, то создает их
-# def read_json_file(dir_path, file_name):
-#     # Проверяем, существует ли указанная директория
-#     if not os.path.exists(dir_path):
-#         os.makedirs(dir_path)  # Создаем директорию, если она не существует
-#
-#     file_path = os.path.join(dir_path, file_name)
-#
-#     # Проверяем, существует ли указанный файл
-#     if not os.path.exists(file_path):
-#         # Создаем пустой файл, если он не существует
-#         with open(file_path, "w") as json_file:
-#             json.dump([], json_file)
-#
-#     # Читаем содержимое JSON-файла
-#     with open(file_path, "r") as json_file:
-#         data = json.load(json_file)
-#
-#     return data
-
+# Функция read_json_file(dir_path, file_name) попытается открыть и прочитать JSON файл по указанному пути
+# и вернуть его содержимое в виде словаря.
+# Если директория или файл не будет найден Функция создаст их,
+# Если произойдет ошибка при декодировании JSON - функция вернет None.
 def read_json_file(dir_path, file_name):
     # Проверяем, существует ли указанная директория
     if not os.path.exists(dir_path):
