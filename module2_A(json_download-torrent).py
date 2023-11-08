@@ -1,4 +1,4 @@
-# D:\Python\myProject\parser_baza-knig\module4.py
+# D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent).py
 
 '''
 В этом модуле загруаем торрент-файлы, имеющиеся на страницах
@@ -42,7 +42,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from module import my_print, select_file, remove_replace_postfix, read_json_file
+from module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file
 from datetime import datetime
 
 # Формируем начальное значение MY_LOG с текущей датой и временем
@@ -77,7 +77,7 @@ def main():
     # Получим содержимое итогового JSON-файла в виде списка словарей
     list_dict_json_Set = read_json_file(dir_Set, file_json_Set)
     my_print(MY_LOG, f'\nКоличество элементов в {file_json_Set}: {len(list_dict_json_Set)}')
-    my_print(MY_LOG, f'Количество элементов в {file_json_Get}: {len(list_dict_json_Get)}\n')
+    my_print(MY_LOG, f'Количество элементов в исходном {file_json_Get}: {len(list_dict_json_Get)}\n')
 
     # Зададим диапозон обрабатываемых элементов списка
     # от 'start_index' до 'end_index' включая границы
@@ -108,36 +108,59 @@ def main():
     formatted_start_time = datetime.fromtimestamp(start_time_pars).strftime("%Y.%m.%d %H:%M")
     my_print(MY_LOG, f'Время начала загрузки торрент-файлов: {formatted_start_time}')
 
+    # счетчик загруженных торрент-файлов
+    sum_torrent = 0
 
-    #
-    # for i, item in enumerate(filtered_items):
-    #     page_url = item["link"]
-    #     # Вызываем download_torrent_file для сохранения торрент-файла
-    #     torrent_file = download_torrent_file(page_url)
-    #     item["torrent"] = torrent_file
-    #     if torrent_file == "Ошибка" or torrent_file == None:
-    #         continue
-    #     else:
-    #         json_files_total.append(item)
-    #         json_files_notTorrent.remove(item)
-    #         print(f'Для индекса: {source_json}_[{i}] - id: {item["id"]}\nУспешно загружен: {torrent_file}')
-    #
-    #         # Обновляем JSON-файлу "book_database_total.json"
-    #         write_json_file(file_path_total, json_files_total)
-    #
-    #         # Обновляем JSON-файл "book_database3.json"
-    #         write_json_file(file_path3, json_files_notTorrent)
-    #         print('-----------')
-    #
-    # end_time_pars = time.time()
-    # elapsed_time_pars = end_time_pars - start_time_pars
-    # elapsed_time_formatted = format_time(elapsed_time_pars)
-    #
-    # print(f"\nНа обработку {end_index-start_index+1} элементов, всего затрачено время : {elapsed_time_formatted}")
-    # print(f"Загружено: {end_index-start_index+1} торрент-файлов")
+    # Начинаем грузить торрент-файла
+    for i, item in enumerate(filtered_items):
+        # засекаем время обработки URL - словаря страницы
+        start_time_URL = time.time()
+
+        page_url = item["link"]
+        # Вызываем download_torrent_file для загрузки торрент-файла
+        torrent_file = download_torrent_file(page_url)
+        my_print(MY_LOG,
+                 f'\nЗагрузка торрент-файла по индексу: [{i}] ({file_json_Get} id: {item["id"]})')
+        # Фуксируем результат работы функции
+        # (имя торрент-файла либо сообщение об ошибке)
+        item["torrent"] = torrent_file
+
+        if torrent_file == "Ошибка" or torrent_file == None or torrent_file == "Торрент не найден":
+            end_time_URL = time.time()
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
+            elapsed_time_URL = format_time(end_time_URL - start_time_URL)
+
+            my_print(MY_LOG, f'Неудачная попытка загрузки.\nВремя обработки URL: [{elapsed_time_URL}]')
+            continue
+        else:
+            # При успешной загрузке торрент-файла внесем изменения в списки словарей
+            list_dict_json_Set.append(item)  # Добавим новый словарь
+            list_dict_json_Get.remove(item)  # Удолим старый словарь
+
+            # Обновляем JSON-файл (export)
+            write_json_file(dir_Set, file_json_Set, list_dict_json_Set)
+
+            # Обновляем JSON-файл (import)
+            write_json_file(dir_Get, file_json_Get, list_dict_json_Get)
+
+            end_time_URL = time.time()
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
+            elapsed_time_URL = format_time(end_time_URL - start_time_URL)
+            my_print(MY_LOG, f'Успешно загружен: {torrent_file}\nВремя обработки URL: [{elapsed_time_URL}]')
+
+            # Не забудим посчитать успешную загрузку
+            sum_torrent += 1
+
+    end_time_pars = time.time()
+    elapsed_time_pars = end_time_pars - start_time_pars
+    elapsed_time_formatted = format_time(elapsed_time_pars)
+
+    my_print(MY_LOG, f"\nНа обработку {end_index-start_index+1} элементов, всего затрачено: {elapsed_time_formatted}")
+    print(f"Загружено: {sum_torrent} торрент-файлов")
 
 def download_torrent_file(url):
-    global total_torrent
     try:
         download_folder = "D:\\User\\Downloads"  # Путь к папке downloads
 
@@ -181,7 +204,7 @@ def download_torrent_file(url):
             try:
                 wait.until(lambda x: any(filename.endswith('.torrent') for filename in os.listdir(download_folder)))
             except TimeoutException:
-                print("Торрент-файл не загружен.")
+                # print("Торрент-файл не загружен.")
                 return None
 
             # Получаем список файлов после скачивания
@@ -190,13 +213,12 @@ def download_torrent_file(url):
             # Находим имя нового файла
             downloaded_file = next(iter(filenames_new - filenames_old), None)
             if downloaded_file is not None:
-                total_torrent = total_torrent+1
                 # Закрываем браузер после скачивания
                 driver.quit()
                 return downloaded_file
 
         else:
-            print(f"Торрент не найден на странице")
+            # print(f"Торрент не найден на странице")
             driver.quit()
             return "Торрент не найден"
 
@@ -204,26 +226,6 @@ def download_torrent_file(url):
         print(f"Ошибка при скачивании торрент-файла: {e}")
         driver.quit()
         return "Ошибка"
-
-
-
-# '''
-# Функция 'write_json_file(file_path, data)' принимает путь к JSON файлу
-# и список словарей (или других объектов, которые могут быть сериализованы в JSON)
-# и записывает их в указанный файл.
-# Если файл существует, он будет перезаписан новыми данными.
-# '''
-# def write_json_file(file_path, data):
-#     with open(file_path, 'w', encoding='utf-8') as file:
-#         json.dump(data, file, ensure_ascii=False, indent=4)
-#     # print(f"Данные успешно записаны в файл: {file_path}")
-#
-#
-# # функция format_time преобразует количество секунд в формат "hh:mm:ss"
-# def format_time(seconds):
-#     hours, remainder = divmod(seconds, 3600)
-#     minutes, seconds = divmod(remainder, 60)
-#     return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
 
 
 if __name__ == "__main__":

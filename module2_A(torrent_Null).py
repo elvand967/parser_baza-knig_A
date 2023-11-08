@@ -1,5 +1,7 @@
+# D:\Python\myProject\parser_baza-knig_A\module2_A(torrent_Null).py
+
 import sqlite3
-import json
+from module import write_json_file
 
 
 # Функция для выборки данных и создания JSON-файла
@@ -20,20 +22,26 @@ def create_json_with_no_torrent(start_id, end_id):
     conn.close()
 
     # Создаем список словарей на основе выбранных строк
-    result_data = []
+    data = []
     for row in rows:
         id, title, link, torrent = row
-        result_data.append({
+        data.append({
             "id": id,
             "title": title,
             "link": link,
             "torrent": torrent
         })
 
-    # Создаем JSON-файл
-    filename = f'book_no_torrent({start_id}-{end_id}).json'
-    with open(filename, 'w', encoding='utf-8') as json_file:
-        json.dump(result_data, json_file, ensure_ascii=False, indent=4)
+
+    # Определим рабочую директорию для *.json файла
+    dir_Get ="JSONfiles\Get"  # Get (получить) - для дальнейшей обработки по скачиванию торрентов
+
+    # Генерируем имя JSON-файла
+    file_name = f'book_torrent({start_id}-{end_id})_no.json'
+
+    # запишем данные в  *.json файл
+    write_json_file(dir_Get, file_name, data)
+    print(f'Создан файл: {file_name}')
 
 
 # Запросим аргументы n и x
@@ -45,4 +53,4 @@ if m < n:
 # Вызываем функцию с заданными значениями n и x
 create_json_with_no_torrent(n, m)
 
-print(f'Создан файл: book_no_torrent({n}-{m}).json')
+
