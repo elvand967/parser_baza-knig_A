@@ -1,4 +1,4 @@
-# D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent).py
+# D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent)_console.py
 
 '''
 В этом модуле загруаем торрент-файлы, имеющиеся на страницах
@@ -55,8 +55,8 @@ def main():
     MY_LOG += "json_download-torrent"
 
     # Определим рабочие директории
-    dir_Get = "JSONfiles\Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
-    dir_Set = "JSONfiles\Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
+    dir_Get = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
+    dir_Set = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
 
     my_print(MY_LOG, 'Для работы модуля: module2_A(json_download-torrent).py')
 
@@ -153,8 +153,8 @@ def main():
             write_json_file(dir_Get, file_json_Get, list_dict_json_Get)
 
             # Не забудим посчитать успешную загрузку
-            sum_torrent += 1
-
+            sum_torrent += 1            
+            
             end_time_URL = time.time()
             # Посчитаем количество секунд затраченное на обработку URL
             # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
@@ -163,7 +163,7 @@ def main():
                      f'Успешно загружен: {torrent_file},'
                      f'\nкнига `{item["title"]}`, id_db: {item["id"]}.'
                      f'\nВремя обработки URL: [{elapsed_time_URL}]'
-                     f'\nВсего загружено {sum_torrent}/{i + 1}-{quantity_filtered_items}')
+                     f'\nВсего загружено {sum_torrent}/{i+1}-{quantity_filtered_items}')
 
     end_time_pars = time.time()
     elapsed_time_pars = end_time_pars - start_time_pars
