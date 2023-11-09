@@ -76,8 +76,8 @@ def main():
 
     # Получим содержимое итогового JSON-файла в виде списка словарей
     list_dict_json_Set = read_json_file(dir_Set, file_json_Set)
-    my_print(MY_LOG, f'\nКоличество элементов в {file_json_Set}: {len(list_dict_json_Set)}')
     my_print(MY_LOG, f'Количество элементов в исходном {file_json_Get}: {len(list_dict_json_Get)}\n')
+    my_print(MY_LOG, f'\nКоличество элементов в итоговом {file_json_Set}: {len(list_dict_json_Set)}')
 
     # Зададим диапозон обрабатываемых элементов списка
     # от 'start_index' до 'end_index' включая границы
@@ -102,6 +102,7 @@ def main():
 
     # Выберем интересующий нас диапозон списка
     filtered_items = islice(list_dict_json_Get, start_index, end_index+1)
+    count_filtered_items = len(filtered_items)  # количество словарей для обработки
 
     # Засекаем начало времени работы кода
     start_time_pars = time.time()
@@ -119,8 +120,10 @@ def main():
         page_url = item["link"]
         # Вызываем download_torrent_file для загрузки торрент-файла
         torrent_file = download_torrent_file(page_url)
-        my_print(MY_LOG,
-                 f'\nЗагрузка торрент-файла по индексу: [{i}] ({file_json_Get} id: {item["id"]})')
+        # my_print(MY_LOG,
+        #          f'\nЗагрузка торрент-файла по индексу: [{i}] ({file_json_Get} id: {item["id"]})')
+        print(f'\nЗагрузка торрент-файла №: [{i+1}] из {count_filtered_items}\n (id: {item["id"]}, {item["title"]})')
+
         # Фуксируем результат работы функции
         # (имя торрент-файла либо сообщение об ошибке)
         item["torrent"] = torrent_file
@@ -131,7 +134,7 @@ def main():
             # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
             elapsed_time_URL = format_time(end_time_URL - start_time_URL)
 
-            my_print(MY_LOG, f'Неудачная попытка загрузки.\nВремя обработки URL: [{elapsed_time_URL}]')
+            my_print(MY_LOG, f'Неудачная попытка загрузки торрент-файла\n(id: {item["id"]}, {item["title"]}).\nВремя обработки URL: [{elapsed_time_URL}]')
             continue
         else:
             # При успешной загрузке торрент-файла внесем изменения в списки словарей
@@ -148,7 +151,7 @@ def main():
             # Посчитаем количество секунд затраченное на обработку URL
             # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
             elapsed_time_URL = format_time(end_time_URL - start_time_URL)
-            my_print(MY_LOG, f'Успешно загружен: {torrent_file}\nВремя обработки URL: [{elapsed_time_URL}]')
+            my_print(MY_LOG, f'Успешно загружен торрент-файл: {torrent_file}\n(id: {item["id"]}, {item["title"]}).\nВремя обработки URL: [{elapsed_time_URL}]')
 
             # Не забудим посчитать успешную загрузку
             sum_torrent += 1
@@ -157,8 +160,10 @@ def main():
     elapsed_time_pars = end_time_pars - start_time_pars
     elapsed_time_formatted = format_time(elapsed_time_pars)
 
-    my_print(MY_LOG, f"\nНа обработку {end_index-start_index+1} элементов, всего затрачено: {elapsed_time_formatted}")
-    print(f"Загружено: {sum_torrent} торрент-файлов")
+    my_print(MY_LOG, f"\n\nНа обработку {count_filtered_items} элементов, всего затрачено: {elapsed_time_formatted}")
+    my_print(MY_LOG, f"Загружено: {sum_torrent} торрент-файлов\n")
+    my_print(MY_LOG, f'Количество элементов в исходном {file_json_Get}: {len(list_dict_json_Get)}\n')
+    my_print(MY_LOG, f'Количество элементов в итоговом {file_json_Set}: {len(list_dict_json_Set)}\n\n\n\n')
 
 def download_torrent_file(url):
     try:
