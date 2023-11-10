@@ -3,6 +3,9 @@ import json
 import os
 import keyboard  # Импортируем модуль keyboard
 import re
+from transliterate import translit, detect_language
+from unidecode import unidecode
+
 
 
 ''' Функция работает в режиме вывода сообщенией в окне терминала
@@ -47,6 +50,56 @@ def get_files_in_directory(dir_path):
     except Exception as e:
         my_print(f"An error occurred/Произошла ошибка:\n{e}")
         return []
+
+
+''' Функция принимает абсолютный путь к директории и возвращает список вложенных в нее папок'''
+def get_subdirectories(directory_path):
+    try:
+        # Получаем список файлов и папок в указанной директории
+        contents = os.listdir(directory_path)
+
+        # Фильтруем только папки
+        subdirectories = [item for item in contents if os.path.isdir(os.path.join(directory_path, item))]
+
+        return subdirectories
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
+
+''' Функция "select_dir(dir_path, MY_LOG)", принимает путь к общей директории.
+При помощи функции "get_subdirectories(dir_path)" определяет список доступных директорий
+После отработки "меню" возвращает имя выбранной директории
+'''
+def select_dir(dir_path, MY_LOG):
+    dirs = get_subdirectories(dir_path)
+
+    my_print(MY_LOG, "доступны директории:")
+    for i, directory in enumerate(dirs):
+        my_print(MY_LOG, f"{i}: {directory}")
+
+    my_print(MY_LOG, "\nДля выбора введите индекс директории или нажмите 'Esc' для выхода:")
+
+    while True:
+        try:
+            key_event = keyboard.read_event()
+            if key_event.event_type == keyboard.KEY_DOWN:
+                if key_event.name == 'esc':
+                    my_print(MY_LOG, "Нажата клавиша 'Esc', выходим из программы.")
+                    return None
+                elif key_event.event_type == keyboard.KEY_DOWN and key_event.name.isnumeric():
+                    i = int(key_event.name)
+                    if 0 <= i < len(dirs):
+                        selected_dir = os.path.join(dir_path, dirs[i])
+                        my_print(MY_LOG, f'Выбрана директория: {selected_dir}')
+                        return selected_dir
+                    else:
+                        my_print(MY_LOG, f'Ошибка: Введен недопустимый индекс. Попробуйте еще раз.')
+        except ValueError:
+            my_print(MY_LOG, f'Ошибка: Некорректный ввод. Введите индекс директории или нажмите "Esc" для выхода.')
+        except keyboard.read_event():
+            pass
 
 
 ''' Функция select_file() получив список файлов
@@ -139,9 +192,45 @@ def write_json_file(dir_path, file_name, data):
     # print(f"Данные успешно записаны в файл: {file_path}")
 
 
-
 ''' функция format_time(seconds) преобразует количество секунд в формат "hh ч. mm м. ss с." '''
 def format_time(seconds):
     hours, remainder = divmod(seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{int(hours):02d} ч. {int(minutes):02d} м. {int(seconds):02d} с."
+
+
+'''Функция принимает путь к основной директории и диапозон чисел,
+после чего в основной директории создает папки с именами этих чисел'''
+def create_subdirectories(base_dir, start_range, end_range):
+    # Создаем основную директорию, если она не существует
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
+    # Создаем поддиректории в указанном диапазоне
+    for number in range(start_range, end_range + 1):
+        subdirectory = os.path.join(base_dir, str(number))
+        os.makedirs(subdirectory)
+        print(f'Создана поддиректория: {subdirectory}')
+
+
+'''функция clean_filename удалит все символы, кроме букв, цифр, пробелов, точек и подчеркиваний, 
+что должно помочь избежать проблем с именами файлов.
+Так-же будет использовать транслитерацию в латиницу для удаления специальных символов из имени файла.'''
+
+
+def clean_filename(filename):
+    return unidecode(''.join(c for c in filename if c.isalnum() or c in (' ', '.', '_')))
+
+
+
+
+
+
+
+
+
+
+
+
+
+

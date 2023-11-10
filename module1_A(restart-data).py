@@ -1,4 +1,4 @@
-# D:\Python\myProject\parser_baza-knig_A\modul0db_A.py
+# D:\Python\myProject\parser_baza-knig_A\modul_db_A.py
 
 '''
 Данный модуль разработан для загрузки из book_database.json в БД первичных данных
