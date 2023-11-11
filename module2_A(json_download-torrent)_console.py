@@ -101,8 +101,12 @@ def main():
 
     my_print(MY_LOG, f'Установлен диапозон обработки словарей {file_json_Get} [{start_index}] -> [{end_index}]')
 
-    # Выберем интересующий нас диапозон списка
-    filtered_items = islice(list_dict_json_Get, start_index, end_index + 1)
+    # # Выберем интересующий нас диапозон списка
+    # filtered_items = islice(list_dict_json_Get, start_index, end_index + 1)
+    # quantity_filtered_items = end_index - start_index + 1  # количество словарей для обработки
+
+    # Выберем интересующий нас диапазон списка
+    filtered_items = list(list_dict_json_Get[start_index:end_index + 1])
     quantity_filtered_items = end_index - start_index + 1  # количество словарей для обработки
 
     # Засекаем начало времени работы кода

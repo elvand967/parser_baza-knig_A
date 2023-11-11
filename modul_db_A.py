@@ -72,8 +72,6 @@ def new_bd_end_tab(database):
             genre TEXT,
             description TEXT(5000),
             image_file TEXT UNIQUE,
-            torrent TEXT UNIQUE,
-            torrent_new TEXT UNIQUE,
             plot REAL,
             writing_talent REAL,
             characters REAL,
