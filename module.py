@@ -232,9 +232,13 @@ def continue_work():
         if keyboard.is_pressed('esc'):
             print("Нажата клавиша 'Esc', выходим из программы.")
             sys.exit()
+        else:
+            return
 
         # Добавьте небольшую задержку, чтобы не загружать процессор
         time.sleep(0.1)
+
+
 
 
 

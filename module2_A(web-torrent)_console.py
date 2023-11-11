@@ -94,7 +94,7 @@ def main():
     my_print(MY_LOG, f'\nКоличество элементов в исходном {file_json_Set}: {len(list_dict_json_Set)}')
     my_print(MY_LOG, f'Количество элементов в итоговом {file_json_Set_web}: {len(list_dict_json_Set_web)}\n')
 
-    # Сверим установочные данные
+    # Сверим установочные данные, пауза
     continue_work()
 
     # Начинаем копировать торрент-файлы
@@ -121,27 +121,103 @@ def main():
 
     add_records_to_torrent_table(list_dict_json_Set_web)
 
+    my_print(MY_LOG, f'\nКоличество элементов в исходном {file_json_Set}: {len(list_dict_json_Set)}')
+    my_print(MY_LOG, f'Количество элементов в итоговом {file_json_Set_web}: {len(list_dict_json_Set_web)}\n')
+
+#
+# def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfiles_total, item, list_dict_json_Set_web):
+#     # Получаем значение id из словаря
+#     '''В данной строке item.get("id", 0),
+#     метод get() используется для получения значения из словаря item по ключу "id".
+#     Если ключ "id" присутствует в словаре item, то метод вернет соответствующее ему значение.
+#     Если ключа "id" нет в словаре, то метод вернет значение по умолчанию, в данном случае 0.
+#
+#     Форма метода get() выглядит так:
+#     get(key, default), где key - это ключ, значение которого мы пытаемся получить,
+#     а default - значение по умолчанию, которое будет возвращено, если ключ отсутствует.'''
+#
+#     # Генерируем путь для новой директории
+#     item_id = item.get("id", 0)
+#     subdirectory = str(item_id // 1000)
+#
+#     path_directory_torrentfiles_total = os.path.join(General_directory_torrentfiles_total, subdirectory)
+#     # print(f'Сгенерирован путь к директории: {path_directory_torrentfiles_total}')
+#
+#     # Получаем имя торрент-файла из словаря
+#     torrent_file_name = item.get("torrent")
+#
+#     # Полный путь к исходному торрент-файлу
+#     # source_torrent_file_path = os.path.join(directory_torrentfiles_old, torrent_file_name)
+#
+#
+#
+#
+#     print(f'directory_torrentfiles_old: {directory_torrentfiles_old}')
+#     print(f'torrent_file_name: {torrent_file_name}')
+#     source_torrent_file_path = os.path.join(directory_torrentfiles_old, torrent_file_name)
+#     print(f'source_torrent_file_path: {source_torrent_file_path}')
+#
+#
+#
+#
+#     # Проверяем наличие исходного торрент-файла
+#     if not os.path.exists(source_torrent_file_path):
+#         print(f'Отсутствует требуемый торрент-файл: {torrent_file_name}')
+#         return
+#
+#     # Проверяем расширение файла
+#     if not torrent_file_name.lower().endswith(".torrent"):
+#         print(f'Игнорируем файл: {torrent_file_name}, так как его расширение не *.torrent')
+#         return
+#
+#     # Генерируем новое имя для торрент-файла
+#     new_torrent_file_name = f'{clean_filename(item["title"]).replace(" ", "_")}_{item_id}.{torrent_file_name.split(".")[-1]}'
+#
+#     # Полный путь к новому торрент-файлу
+#     destination_torrent_file_path = os.path.join(path_directory_torrentfiles_total, new_torrent_file_name)
+#
+#     # Создаем новую директорию, если она не существует
+#     if not os.path.exists(path_directory_torrentfiles_total):
+#         os.makedirs(path_directory_torrentfiles_total)
+#
+#     # Формируем словарь
+#     entry = {
+#         "id_books": item.get("id", 0),
+#         "link": item.get("link"),
+#         "path_torrent_old": directory_torrentfiles_old,
+#         "torrent_old": torrent_file_name,
+#         "torrent": new_torrent_file_name,
+#         "path_torrent": path_directory_torrentfiles_total,
+#     }
+#
+#     try:
+#         # Копируем торрент-файл и переименовываем его
+#         shutil.copy2(source_torrent_file_path, destination_torrent_file_path)
+#         print(f'Торрент-файл успешно скопирован и переименован: {new_torrent_file_name}')
+#
+#         # Добавляем словарь в список
+#         list_dict_json_Set_web.append(entry)
+#         return True
+#
+#     except Exception as e:
+#         print(f'Ошибка при копировании торрент-файла: {e}')
+#         return False
+
 
 def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfiles_total, item, list_dict_json_Set_web):
     # Получаем значение id из словаря
-    '''В данной строке item.get("id", 0),
-    метод get() используется для получения значения из словаря item по ключу "id".
-    Если ключ "id" присутствует в словаре item, то метод вернет соответствующее ему значение.
-    Если ключа "id" нет в словаре, то метод вернет значение по умолчанию, в данном случае 0.
-
-    Форма метода get() выглядит так:
-    get(key, default), где key - это ключ, значение которого мы пытаемся получить,
-    а default - значение по умолчанию, которое будет возвращено, если ключ отсутствует.'''
-
-    # Генерируем путь для новой директории
     item_id = item.get("id", 0)
     subdirectory = str(item_id // 1000)
 
     path_directory_torrentfiles_total = os.path.join(General_directory_torrentfiles_total, subdirectory)
-    # print(f'Сгенерирован путь к директории: {path_directory_torrentfiles_total}')
 
     # Получаем имя торрент-файла из словаря
     torrent_file_name = item.get("torrent")
+
+    # Проверяем наличие значения в переменной torrent_file_name
+    if torrent_file_name is None:
+        print(f'Отсутствует имя торрент-файла для элемента с id={item_id}')
+        return False
 
     # Полный путь к исходному торрент-файлу
     source_torrent_file_path = os.path.join(directory_torrentfiles_old, torrent_file_name)
@@ -149,12 +225,12 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
     # Проверяем наличие исходного торрент-файла
     if not os.path.exists(source_torrent_file_path):
         print(f'Отсутствует требуемый торрент-файл: {torrent_file_name}')
-        return
+        return False
 
     # Проверяем расширение файла
     if not torrent_file_name.lower().endswith(".torrent"):
         print(f'Игнорируем файл: {torrent_file_name}, так как его расширение не *.torrent')
-        return
+        return False
 
     # Генерируем новое имя для торрент-файла
     new_torrent_file_name = f'{clean_filename(item["title"]).replace(" ", "_")}_{item_id}.{torrent_file_name.split(".")[-1]}'
@@ -188,6 +264,19 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
     except Exception as e:
         print(f'Ошибка при копировании торрент-файла: {e}')
         return False
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def add_records_to_torrent_table_old(data_list):
