@@ -8,10 +8,10 @@ def main():
     # new_tabl()
     # print_name_columns("torrent")
 
+
+
+    drop_tabl()
     new_tabl()
-
-    # drop_tabl()
-
 
 
     pass
@@ -144,7 +144,7 @@ def new_tabl():
             id INTEGER PRIMARY KEY,
             link TEXT UNIQUE,
             path_torrent_old TEXT,
-            torrent_old TEXT UNIQUE,
+            torrent_old TEXT,
             torrent TEXT UNIQUE,
             path_torrent TEXT,
             FOREIGN KEY (link) REFERENCES books (link)
@@ -163,7 +163,7 @@ def drop_tabl():
     cursor = conn.cursor()
 
     # Удаляем текущую таблицу
-    cursor.execute("DROP TABLE torrent")
+    cursor.execute("DROP TABLE books_temp")
 
     # Сохраняем изменения
     conn.commit()

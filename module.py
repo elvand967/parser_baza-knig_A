@@ -1,12 +1,13 @@
 # D:\Python\myProject\parser_baza-knig_A\module.py
 import json
 import os
+import sys
+
 import keyboard  # Импортируем модуль keyboard
 import re
 from transliterate import translit, detect_language
 from unidecode import unidecode
-
-
+import time
 
 ''' Функция работает в режиме вывода сообщенией в окне терминала
 и вместе с тем регистрирует все сообщения в текстовом файле
@@ -222,8 +223,18 @@ def clean_filename(filename):
     return unidecode(''.join(c for c in filename if c.isalnum() or c in (' ', '.', '_')))
 
 
+'''Функция приостанавливает работу скрипта и запрашивает подтверждение на продолжение работы
+В случае отказа останавливает код'''
+def continue_work():
+    print("Подтвердите продолжение работы нажатием любой клавиши\nили нажмите 'Esc', для выхода из программы.")
 
+    while True:
+        if keyboard.is_pressed('esc'):
+            print("Нажата клавиша 'Esc', выходим из программы.")
+            sys.exit()
 
+        # Добавьте небольшую задержку, чтобы не загружать процессор
+        time.sleep(0.1)
 
 
 
