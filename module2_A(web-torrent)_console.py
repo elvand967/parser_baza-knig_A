@@ -116,7 +116,6 @@ def main():
 
     print(f'Успешные итерации: {success_count},\nНеудачные итерации: {failure_count}')
     add_records_to_torrent_table(list_dict_json_Set_web)
-    print(f'Успешные итерации: {success_count},\nНеудачные итерации: {failure_count}')
 
 
 def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfiles_total, item, list_dict_json_Set_web):
@@ -186,7 +185,50 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
         print(f'Ошибка при копировании торрент-файла: {e}')
         return False
 
-#
+
+def add_records_to_torrent_table(data_list):
+    # Подключение к базе данных
+    conn = sqlite3.connect("book_database.db")
+    cursor = conn.cursor()
+
+    # Счетчики
+    successful_attempts = 0
+    failed_attempts = 0
+
+    for record in data_list:
+        link = record.get("link")
+        torrent_old = record.get("torrent_old")
+        torrent = record.get("torrent")
+
+        # Проверяем наличие записи с таким ключом или торрентами
+        cursor.execute('SELECT * FROM torrent WHERE link = ? OR torrent_old = ? OR torrent = ?', (link, torrent_old, torrent))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            # Определяем, какое поле вызвало дублирование
+            duplicate_field = "link" if existing_record[1] == link else ("torrent_old" if existing_record[3] == torrent_old else "torrent")
+            print(f'Запись с дублирующим значением поля {duplicate_field} ({existing_record[1]}) уже существует. Пропускаем добавление.')
+            failed_attempts += 1
+            continue
+        else:
+            # Вставляем новую запись, так как записи с таким ключом не существует
+            cursor.execute('''
+                INSERT INTO torrent (link, path_torrent_old, torrent_old, torrent, path_torrent)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (link, record.get("path_torrent_old"), torrent_old, torrent, record.get("path_torrent")))
+            successful_attempts += 1
+
+    # Сохраняем изменения и закрываем соединение
+    conn.commit()
+    conn.close()
+
+    # Выводим сообщения
+    print(f'Успешно добавлено записей: {successful_attempts}')
+    print(f'Неудачных попыток добавления: {failed_attempts}')
+    print(f'Всего попыток добавления: {successful_attempts + failed_attempts}')
+
+
+
 # def add_records_to_torrent_table(data_list):
 #     # Подключение к базе данных
 #     conn = sqlite3.connect("book_database.db")
@@ -197,55 +239,24 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
 #         torrent_old = record.get("torrent_old")
 #         torrent = record.get("torrent")
 #
-#         # Проверяем наличие записи с таким ключом или торрентами
+#         # Проверяем наличие записи с таким ключом
 #         cursor.execute('SELECT * FROM torrent WHERE link = ? OR torrent_old = ? OR torrent = ?', (link, torrent_old, torrent))
-#         existing_record = cursor.fetchone()
+#         existing_records = cursor.fetchall()
 #
-#         if existing_record is None:
-#             # Вставляем новую запись, так как записи с таким ключом не существует
+#         if not existing_records:
+#             # Вставляем новую запись, так как записей с такими ключами не существует
 #             cursor.execute('''
 #                 INSERT INTO torrent (link, path_torrent_old, torrent_old, torrent, path_torrent)
 #                 VALUES (?, ?, ?, ?, ?)
 #             ''', (link, record.get("path_torrent_old"), torrent_old, torrent, record.get("path_torrent")))
 #         else:
-#             # Определяем, какое поле вызвало дублирование
-#             duplicate_field = "link" if existing_record[1] == link else ("torrent_old" if existing_record[3] == torrent_old else "torrent")
-#             print(f'Запись с дублирующим значением поля {duplicate_field} ({existing_record[1]}) уже существует. Пропускаем добавление.')
+#             # Проверяем, какие поля вызывают дублирование
+#             duplicate_fields = [field for field in ["link", "torrent_old", "torrent"] if any(existing_record[1] == record[field] for existing_record in existing_records)]
+#             print(f'Запись с дублирующими значениями полями {", ".join(duplicate_fields)} уже существует. Пропускаем добавление. {existing_records}')
 #
 #     # Сохраняем изменения и закрываем соединение
 #     conn.commit()
 #     conn.close()
-
-
-
-def add_records_to_torrent_table(data_list):
-    # Подключение к базе данных
-    conn = sqlite3.connect("book_database.db")
-    cursor = conn.cursor()
-
-    for record in data_list:
-        link = record.get("link")
-        torrent_old = record.get("torrent_old")
-        torrent = record.get("torrent")
-
-        # Проверяем наличие записи с таким ключом
-        cursor.execute('SELECT * FROM torrent WHERE link = ? OR torrent_old = ? OR torrent = ?', (link, torrent_old, torrent))
-        existing_records = cursor.fetchall()
-
-        if not existing_records:
-            # Вставляем новую запись, так как записей с такими ключами не существует
-            cursor.execute('''
-                INSERT INTO torrent (link, path_torrent_old, torrent_old, torrent, path_torrent)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (link, record.get("path_torrent_old"), torrent_old, torrent, record.get("path_torrent")))
-        else:
-            # Проверяем, какие поля вызывают дублирование
-            duplicate_fields = [field for field in ["link", "torrent_old", "torrent"] if any(existing_record[1] == record[field] for existing_record in existing_records)]
-            print(f'Запись с дублирующими значениями полями {", ".join(duplicate_fields)} уже существует. Пропускаем добавление. {existing_records}')
-
-    # Сохраняем изменения и закрываем соединение
-    conn.commit()
-    conn.close()
 
 
 
