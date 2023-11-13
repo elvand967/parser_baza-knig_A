@@ -1,7 +1,7 @@
-# D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent)_console.py
+# D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent).py
 
 '''
-В этом модуле загружаем торрент-файлы, имеющиеся на страницах
+В этом модуле загруаем торрент-файлы, имеющиеся на страницах
 URL которых полученны по ключу "link" из принятых словарей *.json файла
 
 Так-как данный парсер разробатывается под конкретный сайт,
@@ -9,10 +9,11 @@ URL которых полученны по ключу "link" из приняты
 1
 В проекте создадим директории:
  - "JSONfiles/Get" - размещены *.json файлы источники URL
-    - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_no.json"
+    - *.json файлы будем называть по шаблону "book(1-2300)_torrent_no.json", где (1-2300) - диапозон индексов
+    таблицы "books" db "book_database.db"
 
  - "JSONfiles/Set" - размещены *.json обновленные файлы с информацией о именах загруженных торрентов
-    - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_ThereIs.json"
+    - *.json файлы будем называть по шаблону "book(1-2300)_torrent_ThereIs.json"
 
 Далее при запуске модуля будет формироваться список с именами файлов из директории "JSONfiles/Get"
 Нужно выбрать индекс файла источника ввести его для дальнейшей работы модуля
@@ -44,6 +45,10 @@ from selenium.common.exceptions import TimeoutException
 
 from module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file
 from datetime import datetime
+
+# Импортируем модуль keyboard
+import keyboard
+
 
 # Формируем начальное значение MY_LOG с текущей датой и временем
 now = datetime.now()
@@ -90,7 +95,7 @@ def main():
 
         if end_index < start_index or end_index > max_index or start_index > max_index:
             my_print(MY_LOG, f'Установлено недопустимое соотношение индексов,\n'
-                             f'или указан несуществыющий индекс из допустимых ([0]->[{max_index}]):\n'
+            #  f'или указан несуществыющий индекс из допустимых ([0]->[{max_index}]):\n'
                              f'start_index[{start_index}] -> end_index[{end_index}]')
             continuation = input("Введите 'S' для повторного ввода или любой другой символ для Выхода из программы: ")
             if continuation == 'S' or continuation == 's' or continuation == 'Ы' or continuation == 'ы':
@@ -157,8 +162,8 @@ def main():
             write_json_file(dir_Get, file_json_Get, list_dict_json_Get)
 
             # Не забудим посчитать успешную загрузку
-            sum_torrent += 1            
-            
+            sum_torrent += 1
+
             end_time_URL = time.time()
             # Посчитаем количество секунд затраченное на обработку URL
             # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
@@ -167,7 +172,7 @@ def main():
                      f'Успешно загружен: {torrent_file},'
                      f'\nкнига `{item["title"]}`, id_db: {item["id"]}.'
                      f'\nВремя обработки URL: [{elapsed_time_URL}]'
-                     f'\nВсего загружено {sum_torrent}/{i+1}-{quantity_filtered_items}')
+                     f'\nВсего загружено {sum_torrent}/{i + 1}-{quantity_filtered_items}')
 
     end_time_pars = time.time()
     elapsed_time_pars = end_time_pars - start_time_pars

@@ -3,7 +3,8 @@ import json
 import os
 import sys
 
-import keyboard  # Импортируем модуль keyboard
+# Импортируем модуль keyboard
+import keyboard
 import re
 from transliterate import translit, detect_language
 from unidecode import unidecode
@@ -66,41 +67,104 @@ def get_subdirectories(directory_path):
 
     except Exception as e:
         print(f"Error: {e}")
-        return []
+        return None
 
 
-''' Функция "select_dir(dir_path, MY_LOG)", принимает путь к общей директории.
-При помощи функции "get_subdirectories(dir_path)" определяет список доступных директорий
-После отработки "меню" возвращает имя выбранной директории
+''' 
+Функция "select_dir()", принимает путь к общей директории.
+При помощи функции "get_subdirectories(dir_path)" 
+формирует список доступных директорий в ней и
+- предлагает выбрать из списка доступные 
+- или ввести новую директорию, которую функция создаст
+и вернет путь к требуемой директории
+- или возращает None для выхода из программы 
 '''
 def select_dir(dir_path, MY_LOG):
-    dirs = get_subdirectories(dir_path)
+    dirs = get_subdirectories(dir_path)  # Список вложенных дерикторий
+    if dirs is None:
+        recd = input("Нет вложенных директорий.\nВведите имя для создания новой\n"
+                             "или нажмите 'Q' для выхода:_")
+        if len(recd) == 1 and (recd.upper() == 'Q' or recd.upper() == 'Й'):
+            return None  # вернем отсутствие значения выбора
+        else:
+            # Собираем полный путь к новой директории
+            selected_dir = os.path.join(dir_path, recd)
 
-    my_print(MY_LOG, "доступны директории:")
-    for i, directory in enumerate(dirs):
-        my_print(MY_LOG, f"{i}: {directory}")
-
-    my_print(MY_LOG, "\nДля выбора введите индекс директории или нажмите 'Esc' для выхода:")
+            # Проверяем, существует ли указанная директория
+            if not os.path.exists(selected_dir):
+                os.makedirs(selected_dir)  # Создаем директорию, если она не существует
+            my_print(MY_LOG, f'Создана новая директория: {selected_dir}')
+            return selected_dir
 
     while True:
-        try:
-            key_event = keyboard.read_event()
-            if key_event.event_type == keyboard.KEY_DOWN:
-                if key_event.name == 'esc':
-                    my_print(MY_LOG, "Нажата клавиша 'Esc', выходим из программы.")
-                    return None
-                elif key_event.event_type == keyboard.KEY_DOWN and key_event.name.isnumeric():
-                    i = int(key_event.name)
-                    if 0 <= i < len(dirs):
-                        selected_dir = os.path.join(dir_path, dirs[i])
-                        my_print(MY_LOG, f'Выбрана директория: {selected_dir}')
-                        return selected_dir
-                    else:
-                        my_print(MY_LOG, f'Ошибка: Введен недопустимый индекс. Попробуйте еще раз.')
-        except ValueError:
-            my_print(MY_LOG, f'Ошибка: Некорректный ввод. Введите индекс директории или нажмите "Esc" для выхода.')
-        except keyboard.read_event():
-            pass
+        print("Доступны директории:")
+        for i, directory in enumerate(dirs):
+            print(f"{i}: {directory}")
+        recd = input("Введите индекс требуемой директории\n"
+                                 "или имя, для создания новой.\n"
+                     "Для выхода нажмите 'Q':_")
+
+        if recd.isdigit():  # если строка состоит из цифр
+            i = int(recd)   # приведем к соответсвующемку типу
+            if 0 <= i < len(dirs):  # и введен корректный (допустимый) индекс
+                # Собираем полный путь к директории
+                selected_dir = os.path.join(dir_path, dirs[i])
+                my_print(MY_LOG, f'Выбрана директория: {selected_dir}')
+                return selected_dir
+            else:
+                return None  # вернем отсутствие значения
+
+        elif recd.isalnum():  # если строка состоит из букв и цифр
+            if len(recd) == 1 and (recd.upper() == 'Q' or recd.upper() == 'Й'):
+                return None  # вернем отсутствие значения выбора
+            else:
+                # Собираем полный путь к новой директории
+                selected_dir = os.path.join(dir_path, recd)
+
+                # Проверяем, существует ли указанная директория
+                if not os.path.exists(selected_dir):
+                    os.makedirs(selected_dir)  # Создаем директорию, если она не существует
+                my_print(MY_LOG, f'Создана новая директория: {selected_dir}')
+                return selected_dir
+
+        # другие символы и сочетания
+        else:
+            print('Некорректный ввод! Повторите попытку.')
+
+
+# ''' Функция "select_dir(dir_path, MY_LOG)", принимает путь к общей директории.
+# При помощи функции "get_subdirectories(dir_path)" определяет список доступных директорий
+# После отработки "меню" возвращает имя выбранной директории
+# '''
+# def select_dir(dir_path, MY_LOG):
+#     dirs = get_subdirectories(dir_path)
+#
+#     my_print(MY_LOG, "доступны директории:")
+#     for i, directory in enumerate(dirs):
+#         my_print(MY_LOG, f"{i}: {directory}")
+#
+#     my_print(MY_LOG, "\nДля выбора введите индекс директории или нажмите 'Esc' для выхода:")
+#
+#     while True:
+#         try:
+#             key_event = keyboard.read_event()
+#             if key_event.event_type == keyboard.KEY_DOWN:
+#                 if key_event.name == 'esc':
+#                     my_print(MY_LOG, "Нажата клавиша 'Esc', выходим из программы.")
+#                     return None
+#                 elif key_event.event_type == keyboard.KEY_DOWN and key_event.name.isnumeric():
+#                     i = int(key_event.name)
+#                     if 0 <= i < len(dirs):
+#                         selected_dir = os.path.join(dir_path, dirs[i])
+#                         my_print(MY_LOG, f'Выбрана директория: {selected_dir}')
+#                         return selected_dir
+#                     else:
+#                         my_print(MY_LOG, f'Ошибка: Введен недопустимый индекс. Попробуйте еще раз.')
+#         except ValueError:
+#             my_print(MY_LOG, f'Ошибка: Некорректный ввод. Введите индекс директории или нажмите "Esc" для выхода.')
+#         except keyboard.read_event():
+#             pass
+
 
 
 ''' Функция select_file() получив список файлов

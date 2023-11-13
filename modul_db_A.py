@@ -4,29 +4,22 @@ import sqlite3
 
 def main():
     # add_new_column()
-
     # new_tabl()
     # print_name_columns("torrent")
+    # drop_tabl()  # Удаление таблицы
+    # new_tabl()
 
 
 
-    drop_tabl()
-    new_tabl()
-
+    #     directory = "D:\\Python\\myProject\\parser_baza-knig_A"
+    #     database_files = find_all_databases(directory)
+    #     if len(database_files) == 0:
+    #         print(f'Нет доступных баз данных в директории {directory}')
+    #     elif len(database_files) == 1:
+    #         database = database_files[0]
+    #         print(f'modul_db_A.py работает с  {database}')
 
     pass
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ''' Поиск всех баз данных SQLite в проекте,
@@ -177,14 +170,8 @@ def drop_tabl():
 
 
 
-# def menu():
-#     directory = "D:\\Python\\myProject\\parser_baza-knig_A"
-#     database_files = find_all_databases(directory)
-#     if len(database_files) == 0:
-#         print(f'Нет доступных баз данных в директории {directory}')
-#     elif len(database_files) == 1:
-#         database = database_files[0]
-#         print(f'modul_db_A.py работает с  {database}')
+
+
 
 
 if __name__ == "__main__":
