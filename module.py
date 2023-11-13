@@ -2,6 +2,7 @@
 import json
 import os
 import sys
+import winreg  # для доступа к реестру Windows
 
 # Импортируем модуль keyboard
 import keyboard
@@ -14,31 +15,17 @@ import time
 и вместе с тем регистрирует все сообщения в текстовом файле
 Пример использования функции
 my_print("my_log", "Это текст для записи в лог-файл.")'''
-def my_print(name, text):
-    # Внешний каталог проекта
-    project_dir = "D:\\Python\\myProject\\parser_baza-knig_arh"
-
-    # Директория для хранения лог-файлов
-    log_dir = os.path.join(project_dir, "log_files")
-
-    # Создаем директорию, если она не существует
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    # Генерируем имя текстового файла
-    filename = os.path.join(log_dir, f"{name}.txt")
-
-    # Проверяем наличие файла
-    if os.path.exists(filename):
+def my_print(name_path, text):
+    # Проверяем наличие файла по принятому пути
+    if os.path.exists(name_path):
         # Открываем файл для добавления текста
-        with open(filename, "a", encoding="utf-8") as file:
+        with open(name_path, "a", encoding="utf-8") as file:
             # Добавляем переданный текст с новой строки
             file.write("\n" + text)
     else:
         # Создаем новый файл и записываем текст
-        with open(filename, "w", encoding="utf-8") as file:
+        with open(name_path, "w", encoding="utf-8") as file:
             file.write(text)
-
     # Выводим текст в терминал
     print(text)
 
@@ -305,6 +292,39 @@ def continue_work():
 
 
 
+'''
+Функции которая будет возвращать путь к директории Downloads 
+установленный системой виндовс для скачивания файлов из интернета 
+по умолчанию для браузеров (D:\\User\\Downloads).
+Код открывает соответствующий ключ в реестре и получает значение пути к директории Downloads. 
+Затем он проверяет, существует ли указанная директория. 
+'''
+def get_default_download_directory():
+    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
+
+    try:
+        # Открываем соответствующий ключ в реестре
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            # Получаем значение пути к директории Downloads
+            download_path, _ = winreg.QueryValueEx(key, value_name)
+
+            # Преобразуем в абсолютный путь
+            download_path = os.path.expanduser(download_path)
+
+            # Экранируем символы обратного слеша
+            download_path = download_path.replace("\\", "\\\\")
+
+            # Проверяем, существует ли директория
+            if os.path.exists(download_path):
+                return download_path
+            else:
+                print(f"The directory '{download_path}' does not exist.")
+                return None
+
+    except Exception as e:
+        print(f"Error accessing the registry: {e}")
+        return None
 
 
 

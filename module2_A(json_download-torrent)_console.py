@@ -43,7 +43,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file
+from module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file, \
+    get_default_download_directory
 from datetime import datetime
 
 # Импортируем модуль keyboard
@@ -63,12 +64,12 @@ def main():
     dir_Get = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
     dir_Set = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
 
-    my_print(MY_LOG, 'Для работы модуля: module2_A(json_download-torrent).py')
+    my_print(MY_LOG, 'Модуль: module2_A(json_download-torrent).py')
 
     # Выберем файл для обработки при помощи функции 'select_file(dir_import, MY_LOG)'
     file_json_Get = select_file(dir_Get, MY_LOG)
 
-    # Если нажата клавиша "Esc" выходим из функции
+    # Если нажата клавиша "Q" выходим из функции
     if file_json_Get is None:
         return  # Выход из функции
 
@@ -187,7 +188,8 @@ def main():
 
 def download_torrent_file(url):
     try:
-        download_folder = "D:\\User\\Downloads"  # Путь к папке downloads
+        # Путь к папке downloads получим с помощью нашей функции
+        download_folder = get_default_download_directory()
 
         # Получаем список файлов до скачивания в общей папке загрузок браузеров
         filenames_old = set(os.listdir(download_folder))

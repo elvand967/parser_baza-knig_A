@@ -5,7 +5,7 @@
 
 # Запускаем модуль загрузки торрент-файлов из www.url
 2.1) (venv) C:\Users\User>
- 	    python D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent)_console.py
+ 	    python D:\Python\myProject\parser_baza-knig_A\module2_A.py
 
 
 
