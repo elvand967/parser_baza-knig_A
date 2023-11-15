@@ -8,10 +8,15 @@ URL которых полученны из book_database.db books (link).
 '''
 import json
 import os
+import sqlite3
 import sys
 from datetime import datetime
 import time
 
+
+
+# Директория в которой размещен исполняемый скрипт 'module2_A.py '
+path_current_directory = os.path.abspath(os.path.dirname(__file__))
 
 
 # Формируем имя лог-файла MY_LOG
@@ -24,7 +29,7 @@ def main():
     # определим основные директории
 
     # Директория в которой размещен исполняемый скрипт 'module2_A.py '
-    path_current_directory = os.path.abspath(os.path.dirname(__file__))
+    global path_current_directory
 
     path_dir_Get = os.path.join(path_current_directory, "JSONfiles\\Get")
     if not os.path.exists(path_dir_Get):
@@ -84,9 +89,9 @@ def my_print(name_path, text):
 
 # Меню: режим работы скрипта
 def menu_script_mode():
-    print('Режимы работы скрипта:')
-    print('1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
-    print('2: Регистрация загруженных данных в БД')
+    print('Режимы работы скрипта:\n****************')
+    print('  1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
+    print('  2: Регистрация загруженных данных в БД\n****************')
     recd = int(input("Введите индекс режима работы: "))
     if recd == 1:
         my_print(MY_LOG, 'Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"')
@@ -103,7 +108,7 @@ def menu_packages_downloads(path_dir_Get):
         # используя функцию `get_files_in_directory(dir_path)`
         list_Get_json = get_files_in_directory(path_dir_Get)
         if len(list_Get_json):
-            print('\nДоступны JSON-файлы `пакетов загрузки`:')
+            print('\nДоступны JSON-файлы `пакетов загрузки`:\n---------------------')
             for i, file in enumerate(list_Get_json):
                 # Получим содержимое исходного JSON-файла в виде списка словарей
                 # с помощью функции read_json(dir_path, file_name)
@@ -111,12 +116,13 @@ def menu_packages_downloads(path_dir_Get):
                 if len(list_dict_json_Get) == 0:
                     delete_file(path_dir_Get, file)
                     continue
-                print(f'{i} : {file}\t [{len(list_dict_json_Get)}]')
+                print(f'  {i} : {file}\t [{len(list_dict_json_Get)}]')
         else:
-            print('\nНет доступных JSON-файлов `пакетов загрузки`:')
-        print('N : создать новый `пакет загрузки` (New)\n---------------------')
+            print('\nНет доступных JSON-файлов `пакетов загрузки`:\n---------------------')
+        print('  N : создать новый `пакет загрузки` (New)')
+        print('  X : Выход (Exit)\n---------------------')
 
-        recd = input("Введите индекс `пакета загрузки` или\n`N` (создать новый): ")
+        recd = input("Введите индекс `пакета загрузки` или\nбукву для соответствующих действий: ")
 
         if recd.isdigit():  # если строка состоит из цифр
             i = int(recd)  # приведем к соответсвующемку типу
@@ -127,12 +133,18 @@ def menu_packages_downloads(path_dir_Get):
                 return selected_path_file
 
         elif recd.isalpha():  # если строка состоит из букв
-            if len(recd) == 1 and (recd.upper() == 'N' or recd.upper() == 'Т'):
-                # Запустим функцию создания нового пакета загрузки
-                print('Запустим функцию создания нового пакета загрузки')
-                return
-        # если сюда дошли, повторим попытку
-        print('Некорректный ввод! Повторите попытку.')
+            if len(recd) == 1:
+                if recd.upper() == 'N' or recd.upper() == 'Т':
+                    # Запустим функцию создания нового пакета загрузки
+                    create_json_with_no_torrent(path_dir_Get)
+                    continue
+                elif recd.upper() == 'X' or recd.upper() == 'Ч':
+                    print('Выход')
+                    sys.exit()  # Выходим из программы
+
+        else:
+            # если сюда дошли, повторим попытку
+            print('Некорректный ввод! Повторите попытку.')
 
 
 ''' Функция принимает путь к директории и возвращает список имеющихся в ней файлов
@@ -185,14 +197,68 @@ def delete_file(file_path, file_name):
         print(f'Произошла ошибка при удалении файла {full_path}: {e}')
 
 
+def create_json_with_no_torrent(path_dir_Get):
+    global path_current_directory
+    global MY_LOG
+
+    print('Создаем новый `пакет загрузки`\nУкажите: ' )
+    # Запросим аргументы n и x
+    n = int(input("начальный id диапозона таблицы `books`: "))
+    m = int(input("конечный  id диапозона таблицы `books`: "))
+    if m < n:
+        m = n
+
+    # Генерируем имя JSON-файла
+    file_json_name = f'book_torrent({n}-{m})_no.json'
+
+    # Соберем полный путь к "book_database.db"
+    name_db = "book_database.db"
+    name_db_path = os.path.join(path_current_directory, name_db)
+
+    # Устанавливаем соединение с базой данных
+    conn = sqlite3.connect(name_db_path)
+    cursor = conn.cursor()
+
+    # Выполняем SQL-запрос для выборки данных
+    cursor.execute(
+        '''
+        SELECT books.id, books.title, books.link
+        FROM books
+        LEFT JOIN torrent ON books.link = torrent.link
+        WHERE books.id >= ? AND books.id <= ? AND (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null")
+        ''',
+        (n, m))
+
+    # Извлекаем выбранные строки
+    rows = cursor.fetchall()
+
+    # Закрываем соединение
+    conn.close()
+
+    # Создаем список словарей на основе выбранных строк
+    data = []
+    for row in rows:
+        id, title, link = row
+        data.append({
+            "id": id,
+            "title": title,
+            "link": link,
+        })
+
+    # запишем данные в  *.json файл
+    write_json_file(path_dir_Get, file_json_name, data)
+    my_print(MY_LOG, f'Создан `пакет загрузки`: {file_json_name}')
 
 
-
-
-
-
-
-
+''' Функция 'write_json_file(file_path, data)' принимает директорию, путь к JSON файлу
+и список словарей (или других объектов, которые могут быть сериализованы в JSON)
+Записывает данные (data) в указанный файл.
+Если файл существует, он будет перезаписан новыми данными.   '''
+def write_json_file(dir_path, file_name, data):
+    # Собираем полный путь к JSON-файлу
+    file_path = os.path.join(dir_path, file_name)
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
 
 
