@@ -10,13 +10,60 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import datetime
 import time
+from datetime import datetime
+import winreg  # для доступа к реестру Windows при необходимости получения пути к папке загрузки браузеров по умолчанию
+import random
 
-
+import pyautogui
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+# from datetime import datetime
 
 # Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
+
+
+'''
+Функции которая будет возвращать путь к директории Downloads 
+установленный системой виндовс для скачивания файлов из интернета 
+по умолчанию для браузеров (D:\\User\\Downloads).
+Код открывает соответствующий ключ в реестре и получает значение пути к директории Downloads. 
+Затем он проверяет, существует ли указанная директория. 
+'''
+def get_default_download_directory():
+    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
+
+    try:
+        # Открываем соответствующий ключ в реестре
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            # Получаем значение пути к директории Downloads
+            download_path, _ = winreg.QueryValueEx(key, value_name)
+
+            # Преобразуем в абсолютный путь
+            download_path = os.path.expanduser(download_path)
+
+            # Экранируем символы обратного слеша
+            download_path = download_path.replace("\\", "\\\\")
+
+            # Проверяем, существует ли директория
+            if os.path.exists(download_path):
+                return download_path
+            else:
+                print(f"The directory '{download_path}' does not exist.")
+                return None
+
+    except Exception as e:
+        print(f"Error accessing the registry: {e}")
+        return None
+
+
+# Путь к папке downloads получим с помощью нашей функции
+download_folder = get_default_download_directory()
 
 
 # Формируем имя лог-файла MY_LOG
@@ -58,16 +105,220 @@ def main():
     # Запускаем меню "Режим работы скрипта"
     menu_mode = menu_script_mode()
     if menu_mode == 1:  # Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
-        menu_packages_downloads(path_dir_Get)
+        # Вызовим меню выбора пакетов загрузки
+        path_GetJson_download_package = menu_packages_downloads(path_dir_Get)
+
+        # если функция нам вернула путь к *.json файлу начнем загрузку торрентов
+        if path_GetJson_download_package is not None:
+            downloads_torrent(path_GetJson_download_package)
+
     elif menu_mode == 2:  # 'Режим: "Регистрация загруженных данных в БД"'
         my_print(MY_LOG, f'работа режима "Регистрация загруженных данных в БД"')
 
 
+''' Функция загрузки торрент-файлов.
+Принимает полный путь к исходному JSON-файлу'''
+def downloads_torrent(path_GetJson_download_package):
+    # Получим содержимое исходного JSON-файла в виде списка словарей
+    list_dict_json_Get = read_json_file(path_GetJson_download_package)
+    # Если не получилось прочитать исходный JSON-файл
+    if list_dict_json_Get is None:
+        print('Неудачная попытка открыть и прочитать JSON файл.\nВыход')
+        sys.exit()  # Выходим из программы
+
+    # Создадим полный путь с именем выходного JSON файла (~Set_torrent(...-...).json)
+    # заменив в строке пути и имени файла `Get` на `Set`
+    path_SetJson_download_package =remove_replace_substring_postfix(path_GetJson_download_package, 'Get', 'Set')
+    # Создадим JSON файл (~Set_torrent(...-...).json) с пустым списком или прочитаем если есть
+    list_dict_json_Set = read_json_file(path_SetJson_download_package)
+
+    len_Get_json = len(list_dict_json_Get)
+    my_print(MY_LOG, f'Количество элементов в исходном Get~.json: {len_Get_json}')
+    my_print(MY_LOG, f'Количество элементов в итоговом Set~.json: {len(list_dict_json_Set)}\n')
+
+    # Засекаем начало времени работы кода
+    start_time_pars = time.time()
+    formatted_start_time = datetime.fromtimestamp(start_time_pars).strftime("%Y.%m.%d %H:%M")
+    my_print(MY_LOG, f'Время начала загрузки торрент-файлов: {formatted_start_time}')
+
+    items_dict = list(list_dict_json_Get)
+
+    # счетчик загруженных торрент-файлов
+    sum_torrent = 0
+
+    # Начинаем грузить торрент-файла
+    for i, item in enumerate(items_dict):
+        # засекаем время обработки URL - словаря страницы
+        start_time_URL = time.time()
+
+        page_url = item["link"]
+        # Вызываем download_torrent_file для загрузки торрент-файла
+        torrent_file = download_torrent_file(page_url)
+
+        my_print(MY_LOG, f'\nЗагрузка торрент-файла №: {i + 1} из {len_Get_json}')
+        print(f'\nid_db: {item["id"]}, книга `{item["title"]}`.')
+
+        # # Фуксируем результат работы функции
+        # # (имя торрент-файла либо сообщение об ошибке)
+        # item["torrent"] = torrent_file
+
+        # if torrent_file == "Ошибка" or torrent_file == None or torrent_file == "Торрент не найден":
+        if torrent_file is None:
+            end_time_URL = time.time()
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
+            elapsed_time_URL = format_time(end_time_URL - start_time_URL)
+            all_time =  format_time(end_time_URL - start_time_pars)
+
+            my_print(MY_LOG,
+                     f'!!! Неудачная попытка загрузки торрент-файла,'
+                     f'\nid_db: {item["id"]}, книга `{item["title"]}`.'
+                     f'\nВремя обработки URL: {elapsed_time_URL}/{all_time}'
+                     f'\nВсего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
+            continue
+        else:
+            # Фуксируем результат работы функции (имя торрент-файла)
+            item["torrent"] = torrent_file
+
+            # При успешной загрузке торрент-файла внесем изменения в списки словарей
+            list_dict_json_Set.append(item)  # Добавим новый словарь
+            list_dict_json_Get.remove(item)  # Удолим старый словарь
+
+            # Обновляем SetJson-файл
+            write_json_file(path_SetJson_download_package, list_dict_json_Set)
+
+            # Обновляем GetJson-файл
+            write_json_file(path_GetJson_download_package, list_dict_json_Get)
+
+            # Не забудим посчитать успешную загрузку
+            sum_torrent += 1
+
+            end_time_URL = time.time()
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
+            elapsed_time_URL = format_time(end_time_URL - start_time_URL)
+            all_time = format_time(end_time_URL - start_time_pars)
+            my_print(MY_LOG,
+                     f'Успешно загружен: {torrent_file},'
+                     f'\nкнига `{item["title"]}`, id_db: {item["id"]}.'
+                     f'\nВремя обработки URL: {elapsed_time_URL}/{all_time}'
+                     f'\nВсего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
+
+    end_time_pars = time.time()
+    elapsed_time_pars = end_time_pars - start_time_pars
+    elapsed_time_formatted = format_time(elapsed_time_pars)
+
+    my_print(MY_LOG, f"\n\nНа обработку {len_Get_json} элементов, всего затрачено: {elapsed_time_formatted}")
+    my_print(MY_LOG, f"Загружено: {sum_torrent} торрент-файлов")
+    my_print(MY_LOG, f'\nИтог:'
+                     f'\n- в исходном `Get~.json` осталось не обработано элементов: {len(list_dict_json_Get)}')
+    my_print(MY_LOG, f'- в итоговом `Set~.json` количество элементов: {len(list_dict_json_Set)}\n\n\n\n')
+
+
+
+def download_torrent_file(url):
+    try:
+        # Путь к папке downloads получим с помощью нашей функции
+        global download_folder
+
+        # Получаем список файлов до скачивания в общей папке загрузок браузеров
+        filenames_old = set(os.listdir(download_folder))
+
+        # Используем Google Chrome для скачивания торрент-файла
+        driver = webdriver.Chrome()
+
+        driver.get(url)  # Открываем страницу
+
+        # wait = WebDriverWait(driver, 60)  # Увеличиваем время ожидания +???
+        WebDriverWait(driver, 60)  # Увеличиваем время ожидания +???
+
+        # Используем JavaScript для прокрутки страницы вниз до конца
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        # Теперь можно продолжить скачивание торрент-файла
+
+        # Проверяем наличие ссылки на торрент
+        if driver.find_elements(By.CSS_SELECTOR,
+                                "a[onclick=\"yaCounter46924785.reachGoal('clickTorrent'); return true;\"]"):
+            torrent_link_url = driver.find_element(By.CSS_SELECTOR,
+                                                   "a[onclick=\"yaCounter46924785.reachGoal('clickTorrent'); return true;\"]")
+
+            # Кликаем по ссылке торрента
+            torrent_link_url.click()
+
+            # wait = WebDriverWait(driver, 60)  # Увеличиваем время ожидания
+            WebDriverWait(driver, 60)  # Увеличиваем время ожидания
+
+            # # Подождем 1-2 секунды
+            # t1 = random.randint(1, 2)
+            # time.sleep(t1)
+
+            #  Попробуем закрыть всплывающее окно, имитация нажатия клавиши "f12"
+            pyautogui.press('f12')
+
+            # Подождем еще 2-3 секунды
+            t2 = random.randint(2, 3)
+            time.sleep(t2)
+
+            # # Дождемся загрузки файла  -???
+            # try:
+            #     wait.until(lambda x: any(filename.endswith('.torrent') for filename in os.listdir(download_folder)))
+            # except TimeoutException:
+            #     # print("Торрент-файл не загружен.")
+            #     return None
+
+            # Получаем список файлов после скачивания
+            filenames_new = set(os.listdir(download_folder))
+
+            # Находим имя нового файла
+            downloaded_file = next(iter(filenames_new - filenames_old), None)
+            if downloaded_file is not None:
+                # Закрываем браузер после скачивания
+                driver.quit()
+                return downloaded_file
+
+        else:
+            my_print(MY_LOG, f"Торрент не найден на странице")
+            driver.quit()
+            return None
+
+    except Exception as e:
+        my_print(MY_LOG, f"Ошибка при скачивании торрент-файла: {e}")
+        # driver.quit()
+        return None
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+''' Функция read_json_file(path_json_download_package) попытается 
+открыть и прочитать JSON файл по указанному пути
+и вернуть его содержимое в виде списка словарей.
+Если файла нет, создадим его с пустым списком'''
+def read_json_file(path_json_download_package):
+    try:
+        with open(path_json_download_package, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        return data
+    except FileNotFoundError:
+        # print(f"Файл {path_json_download_package} - не найден.\nСоздан новый файл {file_path}.")
+        data = []
+        with open(path_json_download_package, 'w', encoding='utf-8') as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+        return data
+    except json.JSONDecodeError:
+        print(f"Ошибка при декодировании JSON файла: {path_json_download_package}")
+        return None
 
 
 ''' Функция работает в режиме вывода сообщенией в окне терминала
@@ -109,17 +360,22 @@ def menu_packages_downloads(path_dir_Get):
         list_Get_json = get_files_in_directory(path_dir_Get)
         if len(list_Get_json):
             print('\nДоступны JSON-файлы `пакетов загрузки`:\n---------------------')
+            # В цикле переберем все исходные JSON-файлы директории `path_dir_Get`
             for i, file in enumerate(list_Get_json):
-                # Получим содержимое исходного JSON-файла в виде списка словарей
-                # с помощью функции read_json(dir_path, file_name)
-                list_dict_json_Get = read_json(path_dir_Get, file)
+                # соберем полный путь к файлу
+                file_path = os.path.join(path_dir_Get, file)
+                # с помощью функции read_json_file(path_json_download_package)
+                # прочтем его, сформировав временный список его словарей
+                # что-бы посчитать кол-во этих словарей
+                list_dict_json_Get = read_json_file(file_path)
                 if len(list_dict_json_Get) == 0:
                     delete_file(path_dir_Get, file)
                     continue
                 print(f'  {i} : {file}\t [{len(list_dict_json_Get)}]')
         else:
-            print('\nНет доступных JSON-файлов `пакетов загрузки`:\n---------------------')
-        print('  N : создать новый `пакет загрузки` (New)')
+            print('---------------------\n  Нет доступных JSON-файлов `пакетов загрузки`')
+
+        print('  -------------------\n  N : создать новый `пакет загрузки` (New)')
         print('  X : Выход (Exit)\n---------------------')
 
         recd = input("Введите индекс `пакета загрузки` или\nбукву для соответствующих действий: ")
@@ -127,8 +383,8 @@ def menu_packages_downloads(path_dir_Get):
         if recd.isdigit():  # если строка состоит из цифр
             i = int(recd)  # приведем к соответсвующемку типу
             if 0 <= i < len(list_Get_json):  # и проверим введен ли корректный (допустимый) индекс
-                my_print(MY_LOG, f'Пакет загрузки: {list_Get_json[i]}')
-                # Собираем полный путь к файлу
+                my_print(MY_LOG, f'\nПакет загрузки: {list_Get_json[i]}')
+                # Собираем полный путь к файлу Пакета загрузки
                 selected_path_file = os.path.join(path_dir_Get, list_Get_json[i])
                 return selected_path_file
 
@@ -158,28 +414,6 @@ def get_files_in_directory(dir_path):
         return []
 
 
-''' Функция read_json(dir_path, file_name) попытается открыть 
-и прочитать JSON файл по указанному пути, вернуть его содержимое в виде словаря.
-Если произойдет ошибка при декодировании JSON - функция вернет None.    '''
-def read_json(dir_path, file_name):
-    # Собираем полный путь к JSON-файлу
-    file_path = os.path.join(dir_path, file_name)
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-        return data
-    except FileNotFoundError:
-        print(f"Файл {file_path} - не найден.\nСоздан новый файл {file_path}.")
-        data = []
-        with open(file_path, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-        return data
-    except json.JSONDecodeError:
-        print(f"Ошибка при декодировании JSON файла: {file_path}")
-        return None
-
-
 ''' Функция удаления файла '''
 def delete_file(file_path, file_name):
     # Формируем полный путь к файлу
@@ -197,6 +431,7 @@ def delete_file(file_path, file_name):
         print(f'Произошла ошибка при удалении файла {full_path}: {e}')
 
 
+'''Создаем новый `пакет загрузки`'''
 def create_json_with_no_torrent(path_dir_Get):
     global path_current_directory
     global MY_LOG
@@ -209,7 +444,7 @@ def create_json_with_no_torrent(path_dir_Get):
         m = n
 
     # Генерируем имя JSON-файла
-    file_json_name = f'book_torrent({n}-{m})_no.json'
+    file_json_name = f'Get_torrent({n}-{m}).json'
 
     # Соберем полный путь к "book_database.db"
     name_db = "book_database.db"
@@ -245,8 +480,9 @@ def create_json_with_no_torrent(path_dir_Get):
             "link": link,
         })
 
-    # запишем данные в  *.json файл
-    write_json_file(path_dir_Get, file_json_name, data)
+    # Соберем путь и запишем данные в *.json файл
+    file_path = os.path.join(path_dir_Get, file_json_name)
+    write_json_file(file_path, data)
     my_print(MY_LOG, f'Создан `пакет загрузки`: {file_json_name}')
 
 
@@ -254,14 +490,69 @@ def create_json_with_no_torrent(path_dir_Get):
 и список словарей (или других объектов, которые могут быть сериализованы в JSON)
 Записывает данные (data) в указанный файл.
 Если файл существует, он будет перезаписан новыми данными.   '''
-def write_json_file(dir_path, file_name, data):
-    # Собираем полный путь к JSON-файлу
-    file_path = os.path.join(dir_path, file_name)
-    with open(file_path, 'w', encoding='utf-8') as file:
+def write_json_file(path_file_name, data):
+    with open(path_file_name, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
+''' Функция изменяет части имен/путей файлов или добовляет постфиксы в имена файлов  '''
+def remove_replace_substring_postfix(path_file_name, substring, new_substring=''):
+    if substring is not None:
+        # Заменить или удалить совпадающую подстроку
+        new_path_file_name = path_file_name.replace(substring, new_substring)
+        # Вернуть имя/путь с обработанным подстрокой
+        return new_path_file_name
+    else:
+        # Если `substring` равен None, добавить new_substring перед точкой (расширением файла)
+        base_path, extension = os.path.splitext(path_file_name)
+        return base_path + new_substring + extension
 
+
+'''
+Функции которая будет возвращать путь к директории Downloads 
+установленный системой виндовс для скачивания файлов из интернета 
+по умолчанию для браузеров (D:\\User\\Downloads).
+Код открывает соответствующий ключ в реестре и получает значение пути к директории Downloads. 
+Затем он проверяет, существует ли указанная директория. 
+'''
+def get_default_download_directory():
+    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
+
+    try:
+        # Открываем соответствующий ключ в реестре
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            # Получаем значение пути к директории Downloads
+            download_path, _ = winreg.QueryValueEx(key, value_name)
+
+            # Преобразуем в абсолютный путь
+            download_path = os.path.expanduser(download_path)
+
+            # Экранируем символы обратного слеша
+            download_path = download_path.replace("\\", "\\\\")
+
+            # Проверяем, существует ли директория
+            if os.path.exists(download_path):
+                return download_path
+            else:
+                print(f"The directory '{download_path}' does not exist.")
+                return None
+
+    except Exception as e:
+        print(f"Error accessing the registry: {e}")
+        return None
+
+
+''' функция format_time(seconds) преобразует количество секунд в формат "hh ч. mm м. ss с." '''
+def format_time(seconds):
+    # hours, remainder = divmod(seconds, 3600)
+    # minutes, seconds = divmod(remainder, 60)
+    if seconds >= 60:
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}."
+    else:
+        return f"{int(seconds):02d} сек."
 
 
 
