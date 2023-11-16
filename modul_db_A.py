@@ -1,25 +1,42 @@
 # D:\Python\myProject\parser_baza-knig_A\modul_db_A.py
 import os
 import sqlite3
+import shutil
+from datetime import datetime
+
 
 def main():
+    db_file = 'book_database.db'
+    # create_backup(db_file)
+
     # add_new_column()
     # new_tabl()
     # print_name_columns("torrent")
     # drop_tabl()  # Удаление таблицы
     # new_tabl()
 
+    #update_path_torrent()  # Вызов функции для выполнения запроса
+    # drop_column()    # Создаем резервную копию БД, Удалаляем колонку таблицы "torrent"
+    count_path_torrent_records()  # подсчет торрент-файлов в папках согласно записей в БД
 
 
-    #     directory = "D:\\Python\\myProject\\parser_baza-knig_A"
-    #     database_files = find_all_databases(directory)
-    #     if len(database_files) == 0:
-    #         print(f'Нет доступных баз данных в директории {directory}')
-    #     elif len(database_files) == 1:
-    #         database = database_files[0]
-    #         print(f'modul_db_A.py работает с  {database}')
+#++++++++++++++++++++++++++++++++++++++++++++++++++
+def create_backup(db_file, backup_folder='backup'):
+    # Создать папку для хранения резервных копий, если её нет
+    if not os.path.exists(backup_folder):
+        os.makedirs(backup_folder)
 
-    pass
+    # Генерировать имя резервной копии с использованием даты и времени
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = f'{backup_folder}/book_database_backup_{timestamp}.db'
+
+    try:
+        # Создать резервную копию
+        shutil.copy(db_file, backup_file)
+        print(f'Резервная копия создана: {backup_file}')
+    except Exception as e:
+        print(f'Ошибка при создании резервной копии: {e}')
+#++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 ''' Поиск всех баз данных SQLite в проекте,
@@ -48,7 +65,7 @@ def new_bd_end_tab(database):
     # Получаем курсор для выполнения SQL-запросов
     cursor = conn.cursor()
 
-    # Создаем таблицу для хранения данных
+    # Создаем таблицу для хранения данных "books"
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS books (
             id INTEGER PRIMARY KEY,
@@ -134,7 +151,6 @@ def new_tabl():
         CREATE TABLE IF NOT EXISTS torrent (
             id INTEGER PRIMARY KEY,
             link TEXT UNIQUE,
-            path_torrent_old TEXT,
             torrent_old TEXT,
             torrent TEXT UNIQUE,
             path_torrent TEXT,
@@ -161,6 +177,182 @@ def drop_tabl():
 
     # Закрываем соединение
     conn.close()
+
+
+''' Функция создаст резервную копию БД, Удалит колонку таблицы "torrent" '''
+def drop_column():
+    try:
+        # Подключение к базе данных
+        conn = sqlite3.connect("book_database.db")
+        cursor = conn.cursor()
+
+        # Отключение внешних ключей
+        cursor.execute('PRAGMA foreign_keys=off;')
+
+        # Создание временной таблицы
+        cursor.execute('CREATE TABLE IF NOT EXISTS temp_torrent AS SELECT id, link, torrent_old, torrent, path_torrent FROM torrent')
+
+        # Удаление основной таблицы
+        cursor.execute('DROP TABLE torrent')
+
+        # Переименование временной таблицы в основную
+        cursor.execute('ALTER TABLE temp_torrent RENAME TO torrent')
+
+        # Включение внешних ключей и фиксация изменений
+        cursor.execute('PRAGMA foreign_keys=on;')
+        conn.commit()
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+        if conn:
+            conn.rollback()
+
+    finally:
+        # Закрытие соединения
+        if conn:
+            conn.close()
+
+
+
+
+
+
+''' Корректируем путь к торрент-файлам 
+
+Этот SQL-запрос выполняет обновление столбца `path_torrent` в таблице `torrent` на основе значений столбца `id` из таблицы `books`. 
+Давайте разберем его пошагово:
+
+1. **UPDATE clause (Обновление):**
+   ```sql
+   UPDATE torrent
+   ```
+
+   Это указывает, что мы хотим обновить записи в таблице `torrent`.
+
+2. **SET clause (Установка):**
+   ```sql
+   SET path_torrent = (
+       SELECT CAST(books.id / 1000 AS TEXT)
+       FROM books
+       WHERE books.link = torrent.link
+   )
+   ```
+
+   В этой части мы устанавливаем новые значения для столбца `path_torrent`. 
+   Мы используем подзапрос, который выбирает значение `CAST(books.id / 1000 AS TEXT)` из таблицы `books`. 
+   Этот подзапрос использует деление столбца `id` из `books` на 1000, а затем приводит результат к типу `TEXT`. 
+   Значение `books.id / 1000` используется для создания целого остатка от деления, как вы описали.
+
+3. **WHERE clause (Условие):**
+   ```sql
+   WHERE EXISTS (
+       SELECT 1
+       FROM books
+       WHERE books.link = torrent.link
+   )
+   ```
+
+   Эта часть определяет, к каким записям из таблицы `torrent` мы применяем обновление. 
+   Мы обновляем только те записи, для которых существует соответствующая запись в таблице `books`. 
+   Условие `books.link = torrent.link` гарантирует соответствие записей в обеих таблицах по столбцу `link`.
+
+Таким образом, в результате выполнения этого запроса, значения столбца `path_torrent` в таблице `torrent` 
+будут обновлены на целый остаток от деления на 1000 значений столбца `id` из таблицы `books`, 
+соответствующих тем же самым значениям `link`.
+
++++++++++++++
+
+
+В SQL, выражение `SELECT 1` используется в качестве условия для проверки существования хотя бы одной записи, 
+соответствующей заданным критериям. Оно фактически выбирает константу `1` для каждой строки, удовлетворяющей условиям запроса.
+
+Когда мы пишем `WHERE EXISTS (SELECT 1 ...)`, мы проверяем, 
+существует ли хотя бы одна запись, соответствующая заданным условиям в подзапросе `SELECT 1`.
+
+Применительно к вашему запросу:
+```sql
+WHERE EXISTS (
+    SELECT 1
+    FROM books
+    WHERE books.link = torrent.link
+)
+```
+
+Это условие говорит о том, что обновление будет применено только к тем записям в таблице `torrent`, 
+для которых существует хотя бы одна соответствующая запись в таблице `books`, где значения столбца `link` совпадают. 
+Выражение `SELECT 1` просто указывает на то, что нам не важны конкретные данные, 
+но мы проверяем, есть ли хотя бы одна запись в подзапросе.
+'''
+def update_path_torrent():
+    try:
+        # Подключение к базе данных
+        conn = sqlite3.connect("book_database.db")
+        cursor = conn.cursor()
+
+        # SQL-запрос для обновления path_torrent
+        update_query = '''
+            UPDATE torrent
+            SET path_torrent = (
+                SELECT CAST(books.id / 1000 AS TEXT)
+                FROM books
+                WHERE books.link = torrent.link
+            )
+            WHERE EXISTS (
+                SELECT 1
+                FROM books
+                WHERE books.link = torrent.link
+            )
+        '''
+
+        # Выполнение запроса
+        cursor.execute(update_query)
+
+        # Фиксация изменений
+        conn.commit()
+        print("Данные успешно обновлены.")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+        if conn:
+            conn.rollback()
+
+    finally:
+        # Закрытие соединения
+        if conn:
+            conn.close()
+
+
+def count_path_torrent_records():
+    try:
+        # Подключение к базе данных
+        conn = sqlite3.connect("book_database.db")
+        cursor = conn.cursor()
+
+        # SQL-запрос для подсчета количества записей для каждого значения path_torrent
+        count_query = '''
+            SELECT path_torrent, COUNT(*) AS record_count
+            FROM torrent
+            GROUP BY path_torrent
+        '''
+
+        # Выполнение запроса
+        cursor.execute(count_query)
+
+        # Получение результатов запроса
+        results = cursor.fetchall()
+
+        # Вывод результатов
+        for row in results:
+            path_torrent, record_count = row
+            print(f"Значение path_torrent: {path_torrent}, Количество записей: {record_count}")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+    finally:
+        # Закрытие соединения
+        if conn:
+            conn.close()
 
 
 

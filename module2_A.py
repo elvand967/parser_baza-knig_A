@@ -8,6 +8,7 @@ URL которых полученны из book_database.db books (link).
 '''
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import time
@@ -22,6 +23,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 # from datetime import datetime
+# from unidecode import unidecode
+
+
 
 # Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
@@ -62,9 +66,11 @@ def get_default_download_directory():
         return None
 
 
-# Путь к папке downloads получим с помощью нашей функции
+# Путь к папке downloads системы windows получим с помощью нашей функции
 download_folder = get_default_download_directory()
 
+# Путь к папке downloads программы, для сортировки и хранения переименованных торрент-файлов
+path_dir_downloads_torrent = ''
 
 # Формируем имя лог-файла MY_LOG
 now = datetime.now()
@@ -74,7 +80,6 @@ MY_LOG = now.strftime("%Y-%m-%d_%H-%M_") + script_name + ".txt"
 
 def main():
     # определим основные директории
-
     # Директория в которой размещен исполняемый скрипт 'module2_A.py '
     global path_current_directory
 
@@ -84,6 +89,8 @@ def main():
     path_dir_Set = os.path.join(path_current_directory, "JSONfiles\\Set")
     if not os.path.exists(path_dir_Set):
         os.makedirs(path_dir_Set)  # -//-
+
+    global path_dir_downloads_torrent
     path_dir_downloads_torrent = os.path.join(path_current_directory, "Downloads_torrent")
     if not os.path.exists(path_dir_downloads_torrent):
         os.makedirs(path_dir_downloads_torrent)  # -//-
@@ -156,7 +163,7 @@ def downloads_torrent(path_GetJson_download_package):
         torrent_file = download_torrent_file(page_url)
 
         my_print(MY_LOG, f'\nЗагрузка торрент-файла №: {i + 1} из {len_Get_json}')
-        print(f'\nid_db: {item["id"]}, книга `{item["title"]}`.')
+        print(f'id_db: {item["id"]}, книга `{item["title"]}`.')
 
         # # Фуксируем результат работы функции
         # # (имя торрент-файла либо сообщение об ошибке)
@@ -172,13 +179,20 @@ def downloads_torrent(path_GetJson_download_package):
 
             my_print(MY_LOG,
                      f'!!! Неудачная попытка загрузки торрент-файла,'
-                     f'\nid_db: {item["id"]}, книга `{item["title"]}`.'
+                     # f'\nid_db: {item["id"]}, книга `{item["title"]}`.'
                      f'\nВремя обработки URL: {elapsed_time_URL}/{all_time}'
                      f'\nВсего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
             continue
         else:
-            # Фуксируем результат работы функции (имя торрент-файла)
-            item["torrent"] = torrent_file
+            # Фуксируем имя загруженного торрент-файла
+            item["torrent_old"] = torrent_file
+
+            # Функция переименовывания и сортировки по директориям торрент-файлов
+            new_torrent_file = fixing_new_torrent_path(torrent_file, item["id"], item["title"])
+
+            if new_torrent_file is not None:
+                item["torrent"] = new_torrent_file["torrent"]
+                item["path_torrent"] = new_torrent_file["path_torrent"]
 
             # При успешной загрузке торрент-файла внесем изменения в списки словарей
             list_dict_json_Set.append(item)  # Добавим новый словарь
@@ -199,10 +213,10 @@ def downloads_torrent(path_GetJson_download_package):
             elapsed_time_URL = format_time(end_time_URL - start_time_URL)
             all_time = format_time(end_time_URL - start_time_pars)
             my_print(MY_LOG,
-                     f'Успешно загружен: {torrent_file},'
-                     f'\nкнига `{item["title"]}`, id_db: {item["id"]}.'
-                     f'\nВремя обработки URL: {elapsed_time_URL}/{all_time}'
-                     f'\nВсего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
+                     # f'Успешно загружен: {torrent_file},\n'
+                     # f'книга `{item["title"]}`, id_db: {item["id"]}.\n'
+                     f'Время обработки URL: {elapsed_time_URL}/{all_time}\n'
+                     f'Всего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
 
     end_time_pars = time.time()
     elapsed_time_pars = end_time_pars - start_time_pars
@@ -215,7 +229,7 @@ def downloads_torrent(path_GetJson_download_package):
     my_print(MY_LOG, f'- в итоговом `Set~.json` количество элементов: {len(list_dict_json_Set)}\n\n\n\n')
 
 
-
+''' Функция скачивания торрент-файла с URL '''
 def download_torrent_file(url):
     try:
         # Путь к папке downloads получим с помощью нашей функции
@@ -288,17 +302,91 @@ def download_torrent_file(url):
         return None
 
 
+''' Функция принимает имя загруженного файла и id books
+ копирует его в сортировочную директорию и переименовывает.
+ возращает словарь с старым, новым именем и путем к нему
+ удаляет ранее скаченный файл'''
+def fixing_new_torrent_path(torrent_file, id_books, title):
+    global download_folder  # Папка загрузки файлов по умолчанию, браузеров системы windows
+    global path_dir_downloads_torrent  # Общая папка загрузки файлов скрипта
+
+    # Определим имя сортировачной папки
+    subdirectory = str(id_books // 1000)
+    # Собираем полный путь к сортировачной папкe
+    subdirectory_path = os.path.join(path_dir_downloads_torrent, subdirectory)
+    # Проверяем, существует ли указанная директория
+    if not os.path.exists(subdirectory_path):
+        os.makedirs(subdirectory_path)  # Создаем директорию, если она не существует
+
+    # Определим новое имя торрент-файла
+    new_name_torrent_file = f'{clean_filename(title).replace(" ", "_")}_{id_books}.{torrent_file.split(".")[-1]}'
+
+    # Полный путь к исходному торрент-файлу
+    source_torrent_file_path = os.path.join(download_folder, torrent_file)
+
+    # Полный путь к новому, переименованному торрент-файлу
+    destination_torrent_file_path = os.path.join(subdirectory_path, new_name_torrent_file)
+
+    try:
+        # Копируем торрент-файл и переименовываем его
+        shutil.copy2(source_torrent_file_path, destination_torrent_file_path)
+        my_print(MY_LOG, f'Торрент-файл успешно загружен и переименован:\n`{new_name_torrent_file}`')
+
+        result = {"torrent": new_name_torrent_file,
+                  "path_torrent": destination_torrent_file_path
+                  }
+
+        # Вызовим функцию для удаления загруженного файла
+        # в папке загрузки файлов по умолчанию, браузеров системы windows
+        delete_file(download_folder, torrent_file)
+
+        return result
+
+    except Exception as e:
+        print(f'Ошибка при копировании торрент-файла: {e}')
+        return None
 
 
+''' Простая функция транслитерации кирилицы в латиницу'''
+def transliterate(text):
+    translit_dict = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+        'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+        'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+    }
+
+    result = []
+    for char in text:
+        lower_char = char.lower()
+        result.append(translit_dict.get(lower_char, char))
+
+    return ''.join(result)
 
 
+'''Функция для очистки имени файла от специальных символов 
+и с помощью функции transliterate(text) обеспечивает транслитерации (ru-en).
+Заменит недопустимые символы на дефисы.
+Заменит точки на нижнее подчеркивание.
+Удалит повторяющиеся дефисы.
+Удалит повторяющиеся нижние подчеркивания в имени файла
+'''
+def clean_filename(filename):
+    # Замена недопустимых символов на дефис
+    invalid_chars = {'/', '\\', ':', '*', '?', '"', '<', '>', '|'}
+    filename = ''.join('-' if c in invalid_chars else c for c in filename)
 
+    # Замена точек на нижнее подчеркивание
+    filename = filename.replace('.', '_')
 
+    # Удаление повторяющихся дефисов
+    filename = '-'.join(filter(None, filename.split('-')))
 
+    # Удаление повторяющихся нижних подчеркиваний
+    filename = '_'.join(filter(None, filename.split('_')))
 
-
-
-
+    return transliterate(filename)
 
 
 ''' Функция read_json_file(path_json_download_package) попытается 
@@ -422,7 +510,7 @@ def delete_file(file_path, file_name):
     try:
         # Удаляем файл
         os.remove(full_path)
-        print(f'Файл `{file_name}` успешно удален.')
+        # print(f'Файл `{file_name}` успешно удален.')
     except FileNotFoundError:
         print(f'Файл {full_path} не найден.')
     except PermissionError:
