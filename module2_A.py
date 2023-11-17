@@ -3,8 +3,7 @@
 '''
 В этом модуле загружаем торрент-файлы, имеющиеся на web-страницах
 URL которых полученны из book_database.db books (link).
-При это загружаем только те торрент-файлы о которых записи в book_database.db torrent (torrent) нет
-Жагружаем те торрент-файлы которые еще не зарегестрированны в БД
+При это загружаем только те торрент-файлы о которых записи в book_database.db torrent (torrent) нет.
 '''
 import json
 import os
@@ -113,14 +112,93 @@ def main():
     menu_mode = menu_script_mode()
     if menu_mode == 1:  # Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
         # Вызовим меню выбора пакетов загрузки
-        path_GetJson_download_package = menu_packages_downloads(path_dir_Get)
+        path_GetJson_download_package = menu_packages_downloads(path_dir_Get, menu_mode)
 
         # если функция нам вернула путь к *.json файлу начнем загрузку торрентов
         if path_GetJson_download_package is not None:
             downloads_torrent(path_GetJson_download_package)
 
     elif menu_mode == 2:  # 'Режим: "Регистрация загруженных данных в БД"'
-        my_print(MY_LOG, f'работа режима "Регистрация загруженных данных в БД"')
+        # Вызовим меню выбора пакетов загрузки
+        path_SetJson_download_package = menu_packages_downloads(path_dir_Set, menu_mode)
+
+        # если функция нам вернула путь к *.json файлу начнем загрузку в базу данных
+        if path_SetJson_download_package is not None:
+            print( f'Команда обновлять БД из {path_SetJson_download_package}')
+
+
+
+
+
+
+
+# Меню: режим работы скрипта
+def menu_script_mode():
+    print('Режимы работы скрипта:\n****************')
+    print('  1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
+    print('  2: Регистрация загруженных данных в БД\n****************')
+    recd = int(input("Введите индекс режима работы: "))
+    if recd == 1:
+        my_print(MY_LOG, 'Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"')
+        return 1
+    elif recd == 2:
+        my_print(MY_LOG, 'Режим: "Регистрация загруженных данных в БД"')
+        return 2
+
+
+# Функция меню, Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
+def menu_packages_downloads(path_dir, menu_mode):
+    while True:
+        # Получим список *.json файлов находящихся в принятой директории `path_dir`
+        # используя функцию `get_files_in_directory(dir_path)`
+        list_json = get_files_in_directory(path_dir, '.json')
+        if len(list_json):
+            print('\nДоступны JSON-файлы `пакетов загрузки`:\n---------------------')
+            # В цикле переберем все JSON-файлы в принятой директории `path_dir`
+            for i, file in enumerate(list_json):
+                # соберем полный путь к файлу
+                file_path = os.path.join(path_dir, file)
+                # с помощью функции read_json_file(path_json_download_package)
+                # прочтем его, сформировав временный список его словарей
+                # что-бы посчитать кол-во этих словарей
+                list_dict_json = read_json_file(file_path)
+                if len(list_dict_json) == 0:
+                    delete_file(path_dir, file)
+                    continue
+                print(f'  {i} : {file}\t [{len(list_dict_json)}]')
+        else:
+            print('---------------------\n  Нет доступных JSON-файлов `пакетов загрузки`')
+
+        print('  -------------------')
+        if menu_mode == 1:
+            print('  N : создать новый `пакет загрузки` (New)')
+        print('  X : Выход (Exit)\n---------------------')
+
+        recd = input("Введите индекс `пакета загрузки` или\nбукву для соответствующих действий: ")
+
+        if recd.isdigit():  # если строка состоит из цифр
+            i = int(recd)  # приведем к соответсвующемку типу
+            if 0 <= i < len(list_json):  # и проверим введен ли корректный (допустимый) индекс
+                my_print(MY_LOG, f'\nПакет загрузки: {list_json[i]}')
+                # Собираем полный путь к файлу Пакета загрузки
+                selected_path_file = os.path.join(path_dir, list_json[i])
+                return selected_path_file
+
+        elif recd.isalpha():  # если строка состоит из букв
+            if len(recd) == 1:
+                if menu_mode == 1 and (recd.upper() == 'N' or recd.upper() == 'Т'):
+                    # Запустим функцию создания нового пакета загрузки
+                    create_json_with_no_torrent(path_dir)
+                    continue
+                elif recd.upper() == 'X' or recd.upper() == 'Ч':
+                    print('Выход')
+                    sys.exit()  # Выходим из программы
+
+        else:
+            # если сюда дошли, повторим попытку
+            print('Некорректный ввод! Повторите попытку.')
+
+
 
 
 ''' Функция загрузки торрент-файлов.
@@ -165,11 +243,8 @@ def downloads_torrent(path_GetJson_download_package):
         my_print(MY_LOG, f'\nЗагрузка торрент-файла №: {i + 1} из {len_Get_json}')
         print(f'id_db: {item["id"]}, книга `{item["title"]}`.')
 
-        # # Фуксируем результат работы функции
-        # # (имя торрент-файла либо сообщение об ошибке)
-        # item["torrent"] = torrent_file
-
-        # if torrent_file == "Ошибка" or torrent_file == None or torrent_file == "Торрент не найден":
+        # Фуксируем результат работы функции
+        # (имя торрент-файла либо сообщение об ошибке)
         if torrent_file is None:
             end_time_URL = time.time()
             # Посчитаем количество секунд затраченное на обработку URL
@@ -333,7 +408,8 @@ def fixing_new_torrent_path(torrent_file, id_books, title):
         my_print(MY_LOG, f'Торрент-файл успешно загружен и переименован:\n`{new_name_torrent_file}`')
 
         result = {"torrent": new_name_torrent_file,
-                  "path_torrent": destination_torrent_file_path
+                  "path_torrent": subdirectory
+                  # "path_torrent": destination_torrent_file_path
                   }
 
         # Вызовим функцию для удаления загруженного файла
@@ -426,76 +502,12 @@ def my_print(name_path, text):
     print(text)
 
 
-# Меню: режим работы скрипта
-def menu_script_mode():
-    print('Режимы работы скрипта:\n****************')
-    print('  1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
-    print('  2: Регистрация загруженных данных в БД\n****************')
-    recd = int(input("Введите индекс режима работы: "))
-    if recd == 1:
-        my_print(MY_LOG, 'Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"')
-        return 1
-    elif recd == 2:
-        my_print(MY_LOG, 'Режим: "Регистрация загруженных данных в БД"')
-        return 2
-
-
-# Функция меню, Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
-def menu_packages_downloads(path_dir_Get):
-    while True:
-        # Получим список *.json файлов находящихся в директории `path_dir_Get`
-        # используя функцию `get_files_in_directory(dir_path)`
-        list_Get_json = get_files_in_directory(path_dir_Get)
-        if len(list_Get_json):
-            print('\nДоступны JSON-файлы `пакетов загрузки`:\n---------------------')
-            # В цикле переберем все исходные JSON-файлы директории `path_dir_Get`
-            for i, file in enumerate(list_Get_json):
-                # соберем полный путь к файлу
-                file_path = os.path.join(path_dir_Get, file)
-                # с помощью функции read_json_file(path_json_download_package)
-                # прочтем его, сформировав временный список его словарей
-                # что-бы посчитать кол-во этих словарей
-                list_dict_json_Get = read_json_file(file_path)
-                if len(list_dict_json_Get) == 0:
-                    delete_file(path_dir_Get, file)
-                    continue
-                print(f'  {i} : {file}\t [{len(list_dict_json_Get)}]')
-        else:
-            print('---------------------\n  Нет доступных JSON-файлов `пакетов загрузки`')
-
-        print('  -------------------\n  N : создать новый `пакет загрузки` (New)')
-        print('  X : Выход (Exit)\n---------------------')
-
-        recd = input("Введите индекс `пакета загрузки` или\nбукву для соответствующих действий: ")
-
-        if recd.isdigit():  # если строка состоит из цифр
-            i = int(recd)  # приведем к соответсвующемку типу
-            if 0 <= i < len(list_Get_json):  # и проверим введен ли корректный (допустимый) индекс
-                my_print(MY_LOG, f'\nПакет загрузки: {list_Get_json[i]}')
-                # Собираем полный путь к файлу Пакета загрузки
-                selected_path_file = os.path.join(path_dir_Get, list_Get_json[i])
-                return selected_path_file
-
-        elif recd.isalpha():  # если строка состоит из букв
-            if len(recd) == 1:
-                if recd.upper() == 'N' or recd.upper() == 'Т':
-                    # Запустим функцию создания нового пакета загрузки
-                    create_json_with_no_torrent(path_dir_Get)
-                    continue
-                elif recd.upper() == 'X' or recd.upper() == 'Ч':
-                    print('Выход')
-                    sys.exit()  # Выходим из программы
-
-        else:
-            # если сюда дошли, повторим попытку
-            print('Некорректный ввод! Повторите попытку.')
-
-
-''' Функция принимает путь к директории и возвращает список имеющихся в ней файлов
+''' Функция принимает путь к директории и расширение файла,
+возвращает список имеющихся в ней файлов с требуемым расширением
 В случае ошибки возращает пустой список и сообщение о ошибке '''
-def get_files_in_directory(dir_path):
+def get_files_in_directory(dir_path, file_extension='.json'):
     try:
-        file_list = os.listdir(dir_path)
+        file_list = [file for file in os.listdir(dir_path) if file.endswith(file_extension) and os.path.isfile(os.path.join(dir_path, file))]
         return file_list
     except Exception as e:
         print(f"An error occurred/Произошла ошибка:\n{e}")
