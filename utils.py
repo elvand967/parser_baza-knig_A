@@ -1,9 +1,11 @@
 # D:\Python\myProject\parser_baza-knig_A\utils.py
-
-
+import shutil
+import sqlite3
 import json
 import os
 import winreg  # для доступа к реестру Windows при необходимости получения пути к папке загрузки браузеров по умолчанию
+from datetime import datetime
+
 # from setuptools.msvc import winreg
 
 
@@ -205,6 +207,80 @@ def format_time(seconds):
 
 
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++
+def create_backup(db_file, backup_folder='backup'):
+    # Создать папку для хранения резервных копий, если её нет
+    if not os.path.exists(backup_folder):
+        os.makedirs(backup_folder)
+
+    # Генерировать имя резервной копии с использованием даты и времени
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = f'{backup_folder}/book_database_backup_{timestamp}.db'
+
+    try:
+        # Создать резервную копию
+        shutil.copy(db_file, backup_file)
+        print(f'Резервная копия создана: {backup_file}')
+    except Exception as e:
+        print(f'Ошибка при создании резервной копии: {e}')
+
+# Вызов функции для создания резервной копии БД
+create_backup("D:\\Python\\myProject\\parser_baza-knig_A\\book_database.db", 'backup')
+#++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+''' Функция `def compare_database_and_files(database_path, downloads_path)`
+Задача: провести сверку соответствия данных зафиксированных в таблице "torrent" с фактически имеющимися файлами в соответствующих подпапках
+Вывести отчет о записях в таблице "torrent" для которых фактически нет файлов в требуемом месте,
+а так-же отчет о файлах которые не учтены в таблице "torrent".
+Если какого-либо несоотетствия не будет выявлено, так-же информировать об этом.
+'''
+def compare_database_and_files(database_path, downloads_path):
+    try:
+        # Подключение к базе данных
+        conn = sqlite3.connect(database_path)
+        cursor = conn.cursor()
+
+        # Получение списка записей из таблицы "torrent"
+        cursor.execute('SELECT link, torrent, path_torrent FROM torrent')
+        db_records = cursor.fetchall()
+
+        # Получение списка файлов на диске
+        file_records = []
+        for path_torrent, _, filenames in os.walk(downloads_path):
+            for filename in filenames:
+                file_records.append((os.path.join(path_torrent, filename), filename, os.path.relpath(path_torrent, downloads_path)))
+
+        # Сравнение записей в базе данных и файлах на диске
+        missing_files_db = [record for record in db_records if record[2] not in [file_record[2] for file_record in file_records]]
+        missing_files_disk = [file_record for file_record in file_records if (file_record[2], file_record[1]) not in [(record[2], record[1]) for record in db_records]]
+
+        # Вывод отчета
+        if missing_files_db:
+            print("Записи в базе данных без файлов на диске:")
+            for link, torrent, path_torrent in missing_files_db:
+                print(f"Link: {link}, Torrent: {torrent}, Path_torrent: {path_torrent}")
+
+        if missing_files_disk:
+            print("Файлы на диске без записей в базе данных:")
+            for file_path, filename, path_torrent in missing_files_disk:
+                print(f"File path: {file_path}, Filename: {filename}, Path_torrent: {path_torrent}")
+
+        if not missing_files_db and not missing_files_disk:
+            print("Несоответствие между базой данных и файлами на диске не выявлено.")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+    finally:
+        # Закрытие соединения
+        if conn:
+            conn.close()
+
+# Вызов `def compare_database_and_files(database_path, downloads_path)`
+# compare_database_and_files("book_database.db", "D:\\Python\\myProject\\parser_baza-knig_A\\Downloads_torrent")
+#++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 

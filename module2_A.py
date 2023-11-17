@@ -4,6 +4,9 @@
 В этом модуле загружаем торрент-файлы, имеющиеся на web-страницах
 URL которых полученны из book_database.db books (link).
 При это загружаем только те торрент-файлы о которых записи в book_database.db torrent (torrent) нет.
+
+Лог-файлы пишем с помощью функции my_print(name_path, text)
+
 '''
 import json
 import os
@@ -88,7 +91,8 @@ def main():
 
         # если функция нам вернула путь к *.json файлу начнем загрузку в базу данных
         if path_SetJson_download_package is not None:
-            print( f'Команда обновлять БД из {path_SetJson_download_package}')
+            # print( f'Команда обновлять БД из {path_SetJson_download_package}')
+            general_functions_torrent_db(path_SetJson_download_package)
 
 
 # Меню: режим работы скрипта
@@ -438,8 +442,6 @@ def fixing_new_torrent_path(torrent_file, id_books, title):
         return None
 
 
-
-
 ''' Функция 'write_json_file(file_path, data)' принимает директорию, путь к JSON файлу
 и список словарей (или других объектов, которые могут быть сериализованы в JSON)
 Записывает данные (data) в указанный файл.
@@ -450,7 +452,59 @@ def write_json_file(path_file_name, data):
 
 
 
+''' Общая функция фиксации торрент-файлов в БД.
+Принимает полный путь к Set JSON-файлу, формирует список словарей
+подлежащий обработке функцией ???
+'''
+def general_functions_torrent_db(path_SetJson_download_package):
+    # Получим содержимое исходного JSON-файла в виде списка словарей
+    list_dict_json_Set = read_json_file(path_SetJson_download_package)
+    # Если не получилось прочитать исходный JSON-файл
+    if list_dict_json_Set is None:
+        print('Неудачная попытка открыть и прочитать JSON файл.\nВыход')
+        sys.exit()  # Выходим из программы
+    my_print(MY_LOG, f'Количество словарей в Set~.json: {len(list_dict_json_Set)}\n')
 
+    # Начинаем регестрировать торрент-файлы в БД
+    # Подключение к базе данных
+    conn = sqlite3.connect("book_database.db")
+    cursor = conn.cursor()
+
+    # Счетчики
+    successful_attempts = 0
+    failed_attempts = 0
+
+    for record in list_dict_json_Set:
+        link = record.get("link")
+        torrent = record.get("torrent")
+
+        # Проверяем наличие записи с таким ключом или торрентом
+        cursor.execute('SELECT * FROM torrent WHERE link = ? OR torrent = ?', (link, torrent))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            # Определяем, какое поле вызвало дублирование
+            duplicate_field = "link" if existing_record[1] == link else "torrent"
+            print(f'Запись с дублирующим значением поля {duplicate_field} ({existing_record[1]})\n'
+                  f'уже существует. Пропускаем добавление в таблицу "torrent".\n')
+            failed_attempts += 1
+            continue
+        else:
+            # Вставляем новую запись, так как записи с таким ключом не существует
+            cursor.execute('''
+                INSERT INTO torrent (link, torrent_old, torrent, path_torrent)
+                VALUES (?, ?, ?, ?)
+            ''', (link, record.get("torrent_old"), torrent, record.get("path_torrent")))
+            successful_attempts += 1
+
+    # Сохраняем изменения и закрываем соединение
+    conn.commit()
+    conn.close()
+
+    # Выводим сообщения
+    print(f'Успешно добавлено записей в db: {successful_attempts}')
+    print(f'Неудачных попыток добавления в db: {failed_attempts}')
+    print(f'Всего попыток добавления в db: {successful_attempts + failed_attempts}')
 
 
 
