@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 def main():
-    db_file = 'book_database.db'
+    db_file = '../../book_database.db'
     # create_backup(db_file)  # Создаем резервную копию БД
 
     # add_new_column()
@@ -102,7 +102,7 @@ def new_bd_end_tab(database):
 ''' Функция добавляет новую колонку'''
 def add_new_column():
     # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # Добавляем новую колонку "torrent_new" типа TEXT и делаем её уникальной
@@ -118,7 +118,7 @@ def add_new_column():
 ''' Функция выведет имена всех колонок таблицы'''
 def print_name_columns(tabl):
     # Подключение к базе данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
 
     # Создание объекта cursor
     cursor = conn.cursor()
@@ -143,7 +143,7 @@ def print_name_columns(tabl):
 ''' Создаем новую связанную таблицу'''
 def new_tabl():
     # Подключение к базе данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # 1. Создаем таблицу "torrent"
@@ -166,7 +166,7 @@ def new_tabl():
 ''' Функция удаляет таблицу'''
 def drop_tabl():
     # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # Удаляем текущую таблицу
@@ -183,7 +183,7 @@ def drop_tabl():
 def drop_column():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("book_database.db")
+        conn = sqlite3.connect("../../book_database.db")
         cursor = conn.cursor()
 
         # Отключение внешних ключей
@@ -226,7 +226,7 @@ def drop_column():
 def update_path_torrent():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("book_database.db")
+        conn = sqlite3.connect("../../book_database.db")
         cursor = conn.cursor()
 
         # SQL-запрос для обновления path_torrent
@@ -265,7 +265,7 @@ def update_path_torrent():
 def count_path_torrent_records():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("book_database.db")
+        conn = sqlite3.connect("../../book_database.db")
         cursor = conn.cursor()
 
         # SQL-запрос для подсчета количества записей для каждого значения path_torrent

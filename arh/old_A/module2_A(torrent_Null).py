@@ -1,13 +1,13 @@
 # D:\Python\myProject\parser_baza-knig_A\module2_A(torrent_Null).py
 
 import sqlite3
-from module import write_json_file
+from arh.old_A.module import write_json_file
 
 
 # Функция для выборки данных и создания JSON-файла
 def create_json_with_no_torrent(start_id, end_id):
     # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # Выполняем SQL-запрос для выборки данных
@@ -34,7 +34,7 @@ def create_json_with_no_torrent(start_id, end_id):
 
 
     # Определим рабочую директорию для *.json файла
-    dir_Get ="JSONfiles\Get"  # Get (получить) - для дальнейшей обработки по скачиванию торрентов
+    dir_Get = "../../JSONfiles/Get"  # Get (получить) - для дальнейшей обработки по скачиванию торрентов
 
     # Генерируем имя JSON-файла
     file_name = f'book_torrent({start_id}-{end_id})_no.json'

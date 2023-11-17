@@ -23,47 +23,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 # from datetime import datetime
 # from unidecode import unidecode
-
-
+from utils import get_default_download_directory, clean_filename, \
+    read_json_file, my_print, get_files_in_directory, remove_replace_substring_postfix, delete_file, format_time
 
 # Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
-
-
-'''
-Функции которая будет возвращать путь к директории Downloads 
-установленный системой виндовс для скачивания файлов из интернета 
-по умолчанию для браузеров (D:\\User\\Downloads).
-Код открывает соответствующий ключ в реестре и получает значение пути к директории Downloads. 
-Затем он проверяет, существует ли указанная директория. 
-'''
-def get_default_download_directory():
-    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
-    value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
-
-    try:
-        # Открываем соответствующий ключ в реестре
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
-            # Получаем значение пути к директории Downloads
-            download_path, _ = winreg.QueryValueEx(key, value_name)
-
-            # Преобразуем в абсолютный путь
-            download_path = os.path.expanduser(download_path)
-
-            # Экранируем символы обратного слеша
-            download_path = download_path.replace("\\", "\\\\")
-
-            # Проверяем, существует ли директория
-            if os.path.exists(download_path):
-                return download_path
-            else:
-                print(f"The directory '{download_path}' does not exist.")
-                return None
-
-    except Exception as e:
-        print(f"Error accessing the registry: {e}")
-        return None
-
 
 # Путь к папке downloads системы windows получим с помощью нашей функции
 download_folder = get_default_download_directory()
@@ -116,7 +80,7 @@ def main():
 
         # если функция нам вернула путь к *.json файлу начнем загрузку торрентов
         if path_GetJson_download_package is not None:
-            downloads_torrent(path_GetJson_download_package)
+            general_functions_torrent(path_GetJson_download_package)
 
     elif menu_mode == 2:  # 'Режим: "Регистрация загруженных данных в БД"'
         # Вызовим меню выбора пакетов загрузки
@@ -125,11 +89,6 @@ def main():
         # если функция нам вернула путь к *.json файлу начнем загрузку в базу данных
         if path_SetJson_download_package is not None:
             print( f'Команда обновлять БД из {path_SetJson_download_package}')
-
-
-
-
-
 
 
 # Меню: режим работы скрипта
@@ -199,11 +158,67 @@ def menu_packages_downloads(path_dir, menu_mode):
             print('Некорректный ввод! Повторите попытку.')
 
 
+'''Создаем новый `пакет загрузки`'''
+def create_json_with_no_torrent(path_dir_Get):
+    global path_current_directory
+    global MY_LOG
+
+    print('Создаем новый `пакет загрузки`\nУкажите: ' )
+    # Запросим аргументы n и x
+    n = int(input("начальный id диапозона таблицы `books`: "))
+    m = int(input("конечный  id диапозона таблицы `books`: "))
+    if m < n:
+        m = n
+
+    # Генерируем имя JSON-файла
+    file_json_name = f'Get_torrent({n}-{m}).json'
+
+    # Соберем полный путь к "book_database.db"
+    name_db = "book_database.db"
+    name_db_path = os.path.join(path_current_directory, name_db)
+
+    # Устанавливаем соединение с базой данных
+    conn = sqlite3.connect(name_db_path)
+    cursor = conn.cursor()
+
+    # Выполняем SQL-запрос для выборки данных
+    cursor.execute(
+        '''
+        SELECT books.id, books.title, books.link
+        FROM books
+        LEFT JOIN torrent ON books.link = torrent.link
+        WHERE books.id >= ? AND books.id <= ? AND (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null")
+        ''',
+        (n, m))
+
+    # Извлекаем выбранные строки
+    rows = cursor.fetchall()
+
+    # Закрываем соединение
+    conn.close()
+
+    # Создаем список словарей на основе выбранных строк
+    data = []
+    for row in rows:
+        id, title, link = row
+        data.append({
+            "id": id,
+            "title": title,
+            "link": link,
+        })
+
+    # Соберем путь и запишем данные в *.json файл
+    file_path = os.path.join(path_dir_Get, file_json_name)
+    write_json_file(file_path, data)
+    my_print(MY_LOG, f'Создан `пакет загрузки`: {file_json_name}')
 
 
-''' Функция загрузки торрент-файлов.
-Принимает полный путь к исходному JSON-файлу'''
-def downloads_torrent(path_GetJson_download_package):
+''' Общая функция организации загрузки торрент-файлов.
+Принимает полный путь к исходному JSON-файлу, формирует список словарей
+подлежащий обработке функцией download_torrent_file(page_url) 
+по загрузке каждого из торрент-файлов
+'''
+def general_functions_torrent(path_GetJson_download_package):
     # Получим содержимое исходного JSON-файла в виде списка словарей
     list_dict_json_Get = read_json_file(path_GetJson_download_package)
     # Если не получилось прочитать исходный JSON-файл
@@ -423,167 +438,6 @@ def fixing_new_torrent_path(torrent_file, id_books, title):
         return None
 
 
-''' Простая функция транслитерации кирилицы в латиницу'''
-def transliterate(text):
-    translit_dict = {
-        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
-        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-        'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-        'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
-    }
-
-    result = []
-    for char in text:
-        lower_char = char.lower()
-        result.append(translit_dict.get(lower_char, char))
-
-    return ''.join(result)
-
-
-'''Функция для очистки имени файла от специальных символов 
-и с помощью функции transliterate(text) обеспечивает транслитерации (ru-en).
-Заменит недопустимые символы на дефисы.
-Заменит точки на нижнее подчеркивание.
-Удалит повторяющиеся дефисы.
-Удалит повторяющиеся нижние подчеркивания в имени файла
-'''
-def clean_filename(filename):
-    # Замена недопустимых символов на дефис
-    invalid_chars = {'/', '\\', ':', '*', '?', '"', '<', '>', '|'}
-    filename = ''.join('-' if c in invalid_chars else c for c in filename)
-
-    # Замена точек на нижнее подчеркивание
-    filename = filename.replace('.', '_')
-
-    # Удаление повторяющихся дефисов
-    filename = '-'.join(filter(None, filename.split('-')))
-
-    # Удаление повторяющихся нижних подчеркиваний
-    filename = '_'.join(filter(None, filename.split('_')))
-
-    return transliterate(filename)
-
-
-''' Функция read_json_file(path_json_download_package) попытается 
-открыть и прочитать JSON файл по указанному пути
-и вернуть его содержимое в виде списка словарей.
-Если файла нет, создадим его с пустым списком'''
-def read_json_file(path_json_download_package):
-    try:
-        with open(path_json_download_package, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-        return data
-    except FileNotFoundError:
-        # print(f"Файл {path_json_download_package} - не найден.\nСоздан новый файл {file_path}.")
-        data = []
-        with open(path_json_download_package, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-        return data
-    except json.JSONDecodeError:
-        print(f"Ошибка при декодировании JSON файла: {path_json_download_package}")
-        return None
-
-
-''' Функция работает в режиме вывода сообщенией в окне терминала
-и вместе с тем регистрирует все сообщения в текстовом файле'''
-def my_print(name_path, text):
-    # Проверяем наличие файла по принятому пути
-    if os.path.exists(name_path):
-        # Открываем файл для добавления текста
-        with open(name_path, "a", encoding="utf-8") as file:
-            # Добавляем переданный текст с новой строки
-            file.write("\n" + text)
-    else:
-        # Создаем новый файл и записываем текст
-        with open(name_path, "w", encoding="utf-8") as file:
-            file.write(text)
-    # Выводим текст в терминал
-    print(text)
-
-
-''' Функция принимает путь к директории и расширение файла,
-возвращает список имеющихся в ней файлов с требуемым расширением
-В случае ошибки возращает пустой список и сообщение о ошибке '''
-def get_files_in_directory(dir_path, file_extension='.json'):
-    try:
-        file_list = [file for file in os.listdir(dir_path) if file.endswith(file_extension) and os.path.isfile(os.path.join(dir_path, file))]
-        return file_list
-    except Exception as e:
-        print(f"An error occurred/Произошла ошибка:\n{e}")
-        return []
-
-
-''' Функция удаления файла '''
-def delete_file(file_path, file_name):
-    # Формируем полный путь к файлу
-    full_path = os.path.join(file_path, file_name)
-
-    try:
-        # Удаляем файл
-        os.remove(full_path)
-        # print(f'Файл `{file_name}` успешно удален.')
-    except FileNotFoundError:
-        print(f'Файл {full_path} не найден.')
-    except PermissionError:
-        print(f'Отсутствуют права на удаление файла {full_path}.')
-    except Exception as e:
-        print(f'Произошла ошибка при удалении файла {full_path}: {e}')
-
-
-'''Создаем новый `пакет загрузки`'''
-def create_json_with_no_torrent(path_dir_Get):
-    global path_current_directory
-    global MY_LOG
-
-    print('Создаем новый `пакет загрузки`\nУкажите: ' )
-    # Запросим аргументы n и x
-    n = int(input("начальный id диапозона таблицы `books`: "))
-    m = int(input("конечный  id диапозона таблицы `books`: "))
-    if m < n:
-        m = n
-
-    # Генерируем имя JSON-файла
-    file_json_name = f'Get_torrent({n}-{m}).json'
-
-    # Соберем полный путь к "book_database.db"
-    name_db = "book_database.db"
-    name_db_path = os.path.join(path_current_directory, name_db)
-
-    # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect(name_db_path)
-    cursor = conn.cursor()
-
-    # Выполняем SQL-запрос для выборки данных
-    cursor.execute(
-        '''
-        SELECT books.id, books.title, books.link
-        FROM books
-        LEFT JOIN torrent ON books.link = torrent.link
-        WHERE books.id >= ? AND books.id <= ? AND (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null")
-        ''',
-        (n, m))
-
-    # Извлекаем выбранные строки
-    rows = cursor.fetchall()
-
-    # Закрываем соединение
-    conn.close()
-
-    # Создаем список словарей на основе выбранных строк
-    data = []
-    for row in rows:
-        id, title, link = row
-        data.append({
-            "id": id,
-            "title": title,
-            "link": link,
-        })
-
-    # Соберем путь и запишем данные в *.json файл
-    file_path = os.path.join(path_dir_Get, file_json_name)
-    write_json_file(file_path, data)
-    my_print(MY_LOG, f'Создан `пакет загрузки`: {file_json_name}')
 
 
 ''' Функция 'write_json_file(file_path, data)' принимает директорию, путь к JSON файлу
@@ -595,64 +449,10 @@ def write_json_file(path_file_name, data):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
-''' Функция изменяет части имен/путей файлов или добовляет постфиксы в имена файлов  '''
-def remove_replace_substring_postfix(path_file_name, substring, new_substring=''):
-    if substring is not None:
-        # Заменить или удалить совпадающую подстроку
-        new_path_file_name = path_file_name.replace(substring, new_substring)
-        # Вернуть имя/путь с обработанным подстрокой
-        return new_path_file_name
-    else:
-        # Если `substring` равен None, добавить new_substring перед точкой (расширением файла)
-        base_path, extension = os.path.splitext(path_file_name)
-        return base_path + new_substring + extension
 
 
-'''
-Функции которая будет возвращать путь к директории Downloads 
-установленный системой виндовс для скачивания файлов из интернета 
-по умолчанию для браузеров (D:\\User\\Downloads).
-Код открывает соответствующий ключ в реестре и получает значение пути к директории Downloads. 
-Затем он проверяет, существует ли указанная директория. 
-'''
-def get_default_download_directory():
-    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
-    value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
-
-    try:
-        # Открываем соответствующий ключ в реестре
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
-            # Получаем значение пути к директории Downloads
-            download_path, _ = winreg.QueryValueEx(key, value_name)
-
-            # Преобразуем в абсолютный путь
-            download_path = os.path.expanduser(download_path)
-
-            # Экранируем символы обратного слеша
-            download_path = download_path.replace("\\", "\\\\")
-
-            # Проверяем, существует ли директория
-            if os.path.exists(download_path):
-                return download_path
-            else:
-                print(f"The directory '{download_path}' does not exist.")
-                return None
-
-    except Exception as e:
-        print(f"Error accessing the registry: {e}")
-        return None
 
 
-''' функция format_time(seconds) преобразует количество секунд в формат "hh ч. mm м. ss с." '''
-def format_time(seconds):
-    # hours, remainder = divmod(seconds, 3600)
-    # minutes, seconds = divmod(remainder, 60)
-    if seconds >= 60:
-        hours, remainder = divmod(seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}."
-    else:
-        return f"{int(seconds):02d} сек."
 
 
 

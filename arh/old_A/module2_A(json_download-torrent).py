@@ -1,7 +1,7 @@
 # D:\Python\myProject\parser_baza-knig_A\module2_A(json_download-torrent).py
 
 '''
-В этом модуле загруаем торрент-файлы, имеющиеся на страницах
+В этом модуле загружаем торрент-файлы, имеющиеся на страницах
 URL которых полученны по ключу "link" из принятых словарей *.json файла
 
 Так-как данный парсер разробатывается под конкретный сайт,
@@ -9,11 +9,10 @@ URL которых полученны по ключу "link" из приняты
 1
 В проекте создадим директории:
  - "JSONfiles/Get" - размещены *.json файлы источники URL
-    - *.json файлы будем называть по шаблону "book(1-2300)_torrent_no.json", где (1-2300) - диапозон индексов
-    таблицы "books" db "book_database.db"
+    - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_no.json"
 
  - "JSONfiles/Set" - размещены *.json обновленные файлы с информацией о именах загруженных торрентов
-    - *.json файлы будем называть по шаблону "book(1-2300)_torrent_ThereIs.json"
+    - *.json файлы будем называть по шаблону "%Y-%m-%d_%H-%M_" + "book(1-2300)_torrent_ThereIs.json"
 
 Далее при запуске модуля будет формироваться список с именами файлов из директории "JSONfiles/Get"
 Нужно выбрать индекс файла источника ввести его для дальнейшей работы модуля
@@ -31,7 +30,6 @@ URL которых полученны по ключу "link" из приняты
 '''
 
 import os
-import json
 import random
 import time
 from itertools import islice
@@ -40,16 +38,10 @@ import pyautogui
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file, \
-    get_default_download_directory
+from arh.old_A.module import my_print, select_file, remove_replace_postfix, read_json_file, format_time, write_json_file
 from datetime import datetime
-
-# Импортируем модуль keyboard
-import keyboard
-
 
 # Формируем начальное значение MY_LOG с текущей датой и временем
 now = datetime.now()
@@ -61,15 +53,15 @@ def main():
     MY_LOG += "json_download-torrent"
 
     # Определим рабочие директории
-    dir_Get = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
-    dir_Set = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
+    dir_Get = "../../JSONfiles/Get"  # Get (получить) - для нашего модуля "JSONfiles\import"
+    dir_Set = "../../JSONfiles/Set"  # Set (установить) - для нашего модуля "JSONfiles\export"
 
-    my_print(MY_LOG, 'Модуль: module2_A(json_download-torrent).py')
+    my_print(MY_LOG, 'Для работы модуля: module2_A(json_download-torrent).py')
 
     # Выберем файл для обработки при помощи функции 'select_file(dir_import, MY_LOG)'
     file_json_Get = select_file(dir_Get, MY_LOG)
 
-    # Если нажата клавиша "Q" выходим из функции
+    # Если нажата клавиша "Esc" выходим из функции
     if file_json_Get is None:
         return  # Выход из функции
 
@@ -96,7 +88,7 @@ def main():
 
         if end_index < start_index or end_index > max_index or start_index > max_index:
             my_print(MY_LOG, f'Установлено недопустимое соотношение индексов,\n'
-            #  f'или указан несуществыющий индекс из допустимых ([0]->[{max_index}]):\n'
+                             f'или указан несуществыющий индекс из допустимых ([0]->[{max_index}]):\n'
                              f'start_index[{start_index}] -> end_index[{end_index}]')
             continuation = input("Введите 'S' для повторного ввода или любой другой символ для Выхода из программы: ")
             if continuation == 'S' or continuation == 's' or continuation == 'Ы' or continuation == 'ы':
@@ -107,12 +99,8 @@ def main():
 
     my_print(MY_LOG, f'Установлен диапозон обработки словарей {file_json_Get} [{start_index}] -> [{end_index}]')
 
-    # # Выберем интересующий нас диапозон списка
-    # filtered_items = islice(list_dict_json_Get, start_index, end_index + 1)
-    # quantity_filtered_items = end_index - start_index + 1  # количество словарей для обработки
-
-    # Выберем интересующий нас диапазон списка
-    filtered_items = list(list_dict_json_Get[start_index:end_index + 1])
+    # Выберем интересующий нас диапозон списка
+    filtered_items = islice(list_dict_json_Get, start_index, end_index + 1)
     quantity_filtered_items = end_index - start_index + 1  # количество словарей для обработки
 
     # Засекаем начало времени работы кода
@@ -188,8 +176,7 @@ def main():
 
 def download_torrent_file(url):
     try:
-        # Путь к папке downloads получим с помощью нашей функции
-        download_folder = get_default_download_directory()
+        download_folder = "D:\\User\\Downloads"  # Путь к папке downloads
 
         # Получаем список файлов до скачивания в общей папке загрузок браузеров
         filenames_old = set(os.listdir(download_folder))

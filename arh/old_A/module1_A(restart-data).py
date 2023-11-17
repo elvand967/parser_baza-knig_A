@@ -18,11 +18,11 @@ import sqlite3
 import json
 
 # Открываем JSON-файл и загружаем данные
-with open("arh/book_database.json", "r", encoding="utf-8") as json_file:
+with open("../start/book_database.json", "r", encoding="utf-8") as json_file:
     data = json.load(json_file)
 
 # Устанавливаем соединение с базой данных
-conn = sqlite3.connect("book_database.db")
+conn = sqlite3.connect("../../book_database.db")
 cursor = conn.cursor()
 
 

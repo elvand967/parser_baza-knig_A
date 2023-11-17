@@ -39,7 +39,7 @@ import json
 import shutil
 import sqlite3
 
-from module import my_print, select_file, remove_replace_postfix, read_json_file, \
+from arh.old_A.module import my_print, select_file, remove_replace_postfix, read_json_file, \
     select_dir, clean_filename, continue_work
 from datetime import datetime
 
@@ -58,7 +58,7 @@ def main():
     dir_Set = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set"
 
     # Директория - с новыми *.json файлами, после сортировки и переименования
-    dir_Set_web = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set_web"
+    dir_Set_web = "/arh/old_A/Set_web"
 
     # Общая директория - первоисточник торрент-файлов
     General_directory_torrentfiles_old ="D:\\Python\\myProject\\parser_baza-knig_arh\\Total_Downloads\\Total_Downloads_torrent\\"
@@ -263,19 +263,6 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
     except Exception as e:
         print(f'Ошибка при копировании торрент-файла: {e}')
         return False
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def add_records_to_torrent_table_old(data_list):
