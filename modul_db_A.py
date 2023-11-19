@@ -7,7 +7,7 @@ from datetime import datetime
 
 def main():
     db_file = 'book_database.db'
-    create_backup(db_file)  # Создаем резервную копию БД
+    # create_backup(db_file)  # Создаем резервную копию БД
 
     # add_new_column()
     # new_tabl()
@@ -15,8 +15,8 @@ def main():
     # drop_tabl()  # Удаление таблицы
     # new_tabl()
 
-    # drop_tabl('details')
-    # new_tabl_details()
+    drop_tabl('details')
+    new_tabl_details()
 
     # update_path_torrent()  # Вызов функции для выполнения запроса обновление путей торрент-файлов path//1000
     # drop_column()    # Удалаляем колонку таблицы "torrent"
@@ -183,8 +183,9 @@ def new_tabl_details():
             year TEXT,
             duration TEXT,
             quality TEXT,  -- качество
-            cycle TEXT,
-            size TEXT,
+            cycle TEXT,  -- цикл
+            number_cycle TEXT,  -- номер в цикле
+            size TEXT,  -- Размер
             genre TEXT,  -- жанр 
             description TEXT,  -- описание  
             picture TEXT UNIQUE,
