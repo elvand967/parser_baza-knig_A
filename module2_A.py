@@ -95,19 +95,27 @@ def main():
             # print( f'Команда обновлять БД из {path_SetJson_download_package}')
             general_functions_torrent_db(path_SetJson_download_package)
 
+    elif menu_mode == 3:  # 'Режим: "Сверка загруженных торрент-файлов *.db - Downloads_torrent"'
+        downloads_path_torrent = 'Downloads_torrent'
+        compare_torrent_files_with_database(downloads_path_torrent, 'book_database.db')
+
 
 # Меню: режим работы скрипта
 def menu_script_mode():
     print('Режимы работы скрипта:\n****************')
     print('  1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
-    print('  2: Регистрация загруженных данных в БД\n****************')
-    recd = int(input("Введите индекс режима работы: "))
+    print('  2: Регистрация загруженных данных в БД')
+    print('  3: Сверка загруженных торрент-файлов с БД\n****************')
+    recd = int(input("Введите № режима работы: "))
     if recd == 1:
         my_print(MY_LOG, 'Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"')
         return 1
     elif recd == 2:
         my_print(MY_LOG, 'Режим: "Регистрация загруженных данных в БД"')
         return 2
+    elif recd == 3:
+        my_print(MY_LOG, 'Режим: "Сверка загруженных торрент-файлов *.db - Downloads_torrent"')
+        return 3
 
 
 # Функция меню, Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
@@ -502,7 +510,50 @@ def general_functions_torrent_db(path_SetJson_download_package):
     print(f'Всего попыток добавления в db: {successful_attempts + failed_attempts}')
 
 
+def compare_torrent_files_with_database(directory_path, database_path):
+    # Получить список поддиректорий в Downloads_torrent
+    subdirectories = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
 
+    # Подключиться к базе данных SQLite
+    conn = sqlite3.connect(database_path)
+    cursor = conn.cursor()
+
+    for subdirectory in subdirectories:
+        subdirectory_path = os.path.join(directory_path, subdirectory)
+
+        # Получить список файлов в поддиректории
+        files_in_directory = [f for f in os.listdir(subdirectory_path) if os.path.isfile(os.path.join(subdirectory_path, f))]
+
+        # SQL-запрос для получения списка имен торрент-файлов для данной поддиректории
+        sql_query = f"SELECT path_torrent, torrent FROM torrent WHERE path_torrent = ?"
+        cursor.execute(sql_query, (subdirectory,))
+
+        # Получить результат запроса
+        database_files = cursor.fetchall()
+
+        # Сравнить два списка имен торрент-файлов
+        compare_files(files_in_directory, database_files, subdirectory)
+
+    # Закрыть соединение с базой данных
+    conn.close()
+
+
+def compare_files(files_in_directory, database_files, subdirectory):
+    global MY_LOG
+    # Найти неучтенные файлы
+    unaccounted_files = set(files_in_directory) - set(file[1] for file in database_files)
+    if unaccounted_files:
+        my_print(MY_LOG, f"!!! Неучтенные файлы в поддиректории: {subdirectory}/{', '.join(unaccounted_files)}")
+    else:
+        my_print(MY_LOG, f"Все файлы в поддиректории {subdirectory} учтены")
+
+    # Найти отсутствующие записи в базе данных
+    missing_records = set(file[1] for file in database_files) - set(files_in_directory)
+    if missing_records:
+        my_print(MY_LOG, f"!!! Отсутствуют файлы  {subdirectory} / {', '.join(missing_records)} для записей в *.bd")
+    else:
+        my_print(MY_LOG, f"Все записи в *.bd для поддиректории {subdirectory} имеют соответствующие файлы")
+    my_print(MY_LOG, '----------')
 
 
 if __name__ == "__main__":

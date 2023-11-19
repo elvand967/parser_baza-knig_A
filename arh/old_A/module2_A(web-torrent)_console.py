@@ -55,10 +55,10 @@ def main():
 
     # Определим рабочие директории
     # Директория - первоисточник *.json файлов
-    dir_Set = "D:\\Python\\myProject\\parser_baza-knig_A\\JSONfiles\\Set"
+    dir_Set = "/JSONfiles/Set"
 
     # Директория - с новыми *.json файлами, после сортировки и переименования
-    dir_Set_web = "/arh/old_A/Set_web"
+    dir_Set_web = "Set_web"
 
     # Общая директория - первоисточник торрент-файлов
     General_directory_torrentfiles_old ="D:\\Python\\myProject\\parser_baza-knig_arh\\Total_Downloads\\Total_Downloads_torrent\\"
@@ -267,7 +267,7 @@ def process_torrent_file(directory_torrentfiles_old, General_directory_torrentfi
 
 def add_records_to_torrent_table_old(data_list):
     # Подключение к базе данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # Счетчики
@@ -308,7 +308,7 @@ def add_records_to_torrent_table_old(data_list):
 
 def add_records_to_torrent_table(data_list):
     # Подключение к базе данных
-    conn = sqlite3.connect("book_database.db")
+    conn = sqlite3.connect("../../book_database.db")
     cursor = conn.cursor()
 
     # Счетчики

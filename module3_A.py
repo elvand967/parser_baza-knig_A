@@ -9,6 +9,7 @@
 import os
 import re
 import sqlite3
+import sys
 import time
 import random
 # pip install requests
@@ -39,20 +40,52 @@ user_agents = [
 
 
 def main():
-    # Список словарей для парсинга
-    List_dict_parsing = new_details_parsing_package()
+    menu_mode = menu_script_mode()
+    if menu_mode == 1:
+        # Список словарей для парсинга
+        List_dict_parsing = new_details_parsing_package()
+        total_dict = len(List_dict_parsing)
+        print( f'Попытка обработать {total_dict} страниц(ы)')
+        next_parsing = input('продолжить? ')
+        if next_parsing.upper() == 'X' or next_parsing.upper() == 'Ч':
+            print('Выход')
+            sys.exit()  # Выходим из программы
 
-    for item in List_dict_parsing:
-        print(item["id"], item["title"], item["link"])
-        parser_total = parser(item["id"], item["title"], item["link"])
-        if parser_total is not None:
-            # for i in parser_total:
-            #     print(f'{i}: {parser_total[i]}')
-            insert_details_into_database(parser_total)
+        ii = 0
+        for i, item in enumerate(List_dict_parsing):
+            # Запускаем парсер
+            parser_total = parser(item["id"], item["title"], item["link"])
+            if parser_total is not None:
+                # Вносим данные в таблицу  'details'
+                insert_details_into_database(parser_total)
+                ii += 1
+                print(f'успешный парсинг id: {item["id"]} ({ii}/{i + 1}-{total_dict})  {item["title"]}')
 
-        # Случайная задержка от 0.5 до 2 секунд с шагом 0.1 секунд
-        delay = round(random.uniform(0.5, 2.0), 1)
-        time.sleep(delay)
+            # Случайная задержка от 0.5 до 2 секунд с шагом 0.1 секунд
+            delay = round(random.uniform(0.5, 2.0), 1)
+            time.sleep(delay)
+
+    elif  menu_mode == 2:
+        # Пример использования
+        downloads_path = 'Downloads_picture'
+        database_path = 'book_database.db'
+        compare_files_with_database(downloads_path, database_path)
+
+    else:
+        return
+
+
+def menu_script_mode():
+    print('Режимы работы скрипта module3_A.py:\n****************')
+    print('  1: Парсинг загрузки ("Подробнее" (details))')
+    print('  2: Сверка загруженных картинок с БД\n****************')
+    recd = int(input("Введите № режима работы: "))
+    if recd == 1:
+        print('Режим: Парсинг загрузки ("Подробнее" (details))')
+        return 1
+    elif recd == 2:
+        print('Режим: "Сверка загруженных картинок *.db - Downloads_picture"')
+        return 2
 
 
 '''Создаем новый `пакет парсинга` <details> '''
@@ -123,12 +156,6 @@ def key_translation(ru_key):
     return translation_dict.get(ru_key, ru_key)
 
 
-def save(comps):
-    with open('pars01_info.txt', 'a') as file:
-        for comp in comps:
-            file.write(f"{comp['title']}\nОписание: {comp['text']}\nСсылка: {comp['link']}\n\n")
-
-
 '''
 Функция принимает страницы для парсинга и возращает словарь с результатами
 '''
@@ -140,10 +167,10 @@ def parser(id_books, title, url):
     # HEADERS = {
     #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
     # }
-    # HEADERS = {
-    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)'
-    # }
-    global user_agents
+    HEADERS = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)'
+    }
+    # global user_agents
 
     # отправим запрос на сервер
     max_retries = 3
@@ -151,21 +178,25 @@ def parser(id_books, title, url):
 
     while retries < max_retries:
         try:
-            HEADERS = {'User-Agent': random.choice(user_agents)}
+            # HEADERS = {'User-Agent': random.choice(user_agents)}
             response = requests.get(url, headers=HEADERS, timeout=3)
             response.raise_for_status()  # Проверяем, был ли успешный запрос
             break  # Выход из цикла, если запрос прошел успешно
         except Timeout as e:
             retries += 1
             if retries < max_retries:
-                print(f"Ошибка:\n{e}.\nПовторная попытка через 3 секунд (попытка {retries}/{max_retries}).")
+                print(f"Ошибка:\n{e}.\n"
+                      f"{id_books} {title}: {url}\n"
+                      f"Повторная попытка парсинга страницы через 3 секунд (попытка {retries}/{max_retries}).")
                 time.sleep(3)
             else:
-                print(f"Достигнуто максимальное количество попыток. Прекращаем повторные попытки.")
-                return
+                print(f"Достигнуто максимальное количество попыток парсинга страницы.\n"
+                      f"{id_books} {title}: {url}\n"
+                      f"Прекращаем повторные попытки.")
+                return None
         except Exception as e:
             print(f"Неожиданная ошибка:\n{e}")
-            return
+            return None
 
     soup = BeautifulSoup(response.content, 'html.parser')
     comps = {"id_books": id_books, "link": url}
@@ -190,14 +221,17 @@ def parser(id_books, title, url):
             elif key == 'Цикл':
                 comps['cycle'] = li.contents[1].text.strip()
 
-                # Получаем строку вида "(2)" и извлекаем число
-                number_cycle_str = li.contents[2].text.strip()
-                match = re.match(r'\((\d+)\)', number_cycle_str)
+                # Проверяем наличие третьего элемента перед его использованием
+                if len(li.contents) > 2:
+                    number_cycle_str = li.contents[2].text.strip()
+                    match = re.match(r'\((\d+)\)', number_cycle_str)
 
-                if match:
-                    comps['number_cycle'] = int(match.group(1))
+                    if match:
+                        comps['number_cycle'] = int(match.group(1))
+                    else:
+                        comps['number_cycle'] = None  # Обработка случая, когда не удалось извлечь число
                 else:
-                    comps['number_cycle'] = None  # Обработка случая, когда не удалось извлечь число
+                    comps['number_cycle'] = None
                 continue
 
             value = li.contents[1].text.strip()
@@ -258,13 +292,18 @@ def parser(id_books, title, url):
         if picture is not None:
             comps['path_picture'] = picture[0]
             comps['picture'] = picture[1]
+        else:
+            return None
 
     return comps
 
 
 # Функция для загрузки и сохранения картинки
 def download_image(url, id_books, title):
-    global user_agents
+    # global user_agents
+    HEADERS = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)'
+    }
 
     # отправим запрос на сервер
     max_retries = 3
@@ -272,17 +311,21 @@ def download_image(url, id_books, title):
 
     while retries < max_retries:
         try:
-            HEADERS = {'User-Agent': random.choice(user_agents)}
+            # HEADERS = {'User-Agent': random.choice(user_agents)}
             response = requests.get(url, headers=HEADERS, timeout=3)
             response.raise_for_status()  # Проверяем, был ли успешный запрос
             break  # Выход из цикла, если запрос прошел успешно
         except Timeout as e:
             retries += 1
             if retries < max_retries:
-                print(f"Ошибка:\n{e}.\nПовторная попытка загрузки картинки через 3 секунд (попытка {retries}/{max_retries}).")
+                print(f"Ошибка:\n{e}.\n"
+                      f"{id_books} {title}: {url}\n"
+                      f"Повторная попытка загрузки картинки через 3 секунд (попытка {retries}/{max_retries}).")
                 time.sleep(3)
             else:
-                print(f"Достигнуто максимальное количество попыток загрузки картинки.\nПрекращаем повторные попытки.")
+                print(f"Достигнуто максимальное количество попыток загрузки картинки."
+                      f"{id_books} {title}: {url}\n"
+                      f"\nПрекращаем повторные попытки.")
                 return
         except Exception as e:
             print(f"Неожиданная ошибка:\n{e}")
@@ -317,6 +360,7 @@ def download_image(url, id_books, title):
         return None
 
 
+# Фиксация данных в таблице 'details'
 def insert_details_into_database(details_dict):
     # Подключаемся к базе данных
     conn = sqlite3.connect('book_database.db')
@@ -346,6 +390,57 @@ def insert_details_into_database(details_dict):
     # Сохраняем изменения и закрываем соединение
     conn.commit()
     conn.close()
+
+
+def compare_files_with_database(directory_path, database_path):
+    # Получить список поддиректорий в Downloads_picture
+    subdirectories = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
+
+    # Подключиться к базе данных SQLite
+    conn = sqlite3.connect(database_path)
+    cursor = conn.cursor()
+    print('==========')
+    for subdirectory in subdirectories:
+        subdirectory_path = os.path.join(directory_path, subdirectory)
+
+        # Получить список файлов в поддиректории
+        files_in_directory = [f for f in os.listdir(subdirectory_path) if os.path.isfile(os.path.join(subdirectory_path, f))]
+
+        # SQL-запрос для получения списка имен файлов для данной поддиректории
+        sql_query = f"SELECT path_picture, picture FROM details WHERE path_picture = ?"
+        cursor.execute(sql_query, (subdirectory,))
+
+        # Получить результат запроса
+        database_files = cursor.fetchall()
+
+        # Сравнить два списка имен файлов
+        compare_files(files_in_directory, database_files, subdirectory)
+
+    # Закрыть соединение с базой данных
+    conn.close()
+
+def compare_files(files_in_directory, database_files, subdirectory):
+    # Найти неучтенные файлы
+    unaccounted_files = set(files_in_directory) - set(file[1] for file in database_files)
+    if unaccounted_files:
+        print(f"!!! Неучтенные файлы в поддиректории: {subdirectory}/{', '.join(unaccounted_files)}")
+    else:
+        print(f"Все файлы в поддиректории {subdirectory} учтены")
+
+    # Найти отсутствующие записи в базе данных
+    missing_records = set(file[1] for file in database_files) - set(files_in_directory)
+    if missing_records:
+        print(f"!!! Отсутствуют файлы  {subdirectory} / {', '.join(missing_records)} для записей в *.bd")
+    else:
+        print(f"Все записи в *.bd для поддиректории {subdirectory} имеют соответствующие файлы")
+    print('----------')
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
