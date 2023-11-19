@@ -1,7 +1,8 @@
+# -*- coding: cp1251 -*-
 # D:\Python\myProject\parser_baza-knig_A\module3_A.py
 
 '''
-Р”Р°РЅРЅС‹Р№ РјРѕРґСѓР»СЊ РїР°СЂСЃРёС‚ СЃС‚СЂР°РЅРёС†С‹ "РџРѕРґСЂРѕР±РЅРµРµ" (details)
+Данный модуль парсит страницы "Подробнее" (details)
 
 '''
 # import mimetypes
@@ -18,43 +19,43 @@ from requests.exceptions import Timeout
 
 from utils import clean_filename
 
-# Р”РёСЂРµРєС‚РѕСЂРёСЏ РІ РєРѕС‚РѕСЂРѕР№ СЂР°Р·РјРµС‰РµРЅ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ СЃРєСЂРёРїС‚ 'module2_A.py '
+# Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
 
 def main():
-    # РЎРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№ РґР»СЏ РїР°СЂСЃРёРЅРіР°
+    # Список словарей для парсинга
     List_dict_parsing = new_details_parsing_package()
 
     for item in List_dict_parsing:
         # print(item["link"])
         parser(item["id"], item["title"], item["link"])
-        # РЎР»СѓС‡Р°Р№РЅР°СЏ Р·Р°РґРµСЂР¶РєР° РѕС‚ 0.5 РґРѕ 2 СЃРµРєСѓРЅРґ СЃ С€Р°РіРѕРј 0.1 СЃРµРєСѓРЅРґ
+        # Случайная задержка от 0.5 до 2 секунд с шагом 0.1 секунд
         delay = round(random.uniform(0.5, 2.0), 1)
         time.sleep(delay)
 
 
-'''РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ `РїР°РєРµС‚ РїР°СЂСЃРёРЅРіР°` <details> '''
+'''Создаем новый `пакет парсинга` <details> '''
 def new_details_parsing_package():
     global path_current_directory
 
-    print('РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ `РїР°РєРµС‚ РїР°СЂСЃРµСЂР°`\nРЈРєР°Р¶РёС‚Рµ: ' )
-    # Р—Р°РїСЂРѕСЃРёРј Р°СЂРіСѓРјРµРЅС‚С‹ n Рё x
-    n = int(input("РЅР°С‡Р°Р»СЊРЅС‹Р№ id РґРёР°РїРѕР·РѕРЅР° С‚Р°Р±Р»РёС†С‹ `books`: "))
-    m = int(input("РєРѕРЅРµС‡РЅС‹Р№  id РґРёР°РїРѕР·РѕРЅР° С‚Р°Р±Р»РёС†С‹ `books`: "))
+    print('Создаем новый `пакет парсера`\nУкажите: ' )
+    # Запросим аргументы n и x
+    n = int(input("начальный id диапозона таблицы `books`: "))
+    m = int(input("конечный  id диапозона таблицы `books`: "))
     if m < n:
         m = n
 
-    # РЎРѕР±РµСЂРµРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє "book_database.db"
+    # Соберем полный путь к "book_database.db"
     name_db = "book_database.db"
     name_db_path = os.path.join(path_current_directory, name_db)
 
-    # РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…
+    # Устанавливаем соединение с базой данных
     conn = sqlite3.connect(name_db_path)
     cursor = conn.cursor()
 
-    # Р’С‹РїРѕР»РЅСЏРµРј SQL-Р·Р°РїСЂРѕСЃ РґР»СЏ РІС‹Р±РѕСЂРєРё РґР°РЅРЅС‹С…
-    # books.id, books.title, books.link РґР»СЏ СЃС‚СЂРѕРє РєРѕС‚РѕСЂС‹С…
-    # РµСЃС‚СЊ Р·Р°РїРёСЃРё РІ С‚Р°Р±Р»РёС†Рµ `torrent` Рё РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‚ Р·Р°РїРёСЃРё РІ С‚Р°Р±Р»РёС†Рµ `details`
+    # Выполняем SQL-запрос для выборки данных
+    # books.id, books.title, books.link для строк которых
+    # есть записи в таблице `torrent` и отсутствуют записи в таблице `details`
     cursor.execute(
         '''
         SELECT books.id, books.title, books.link
@@ -66,13 +67,13 @@ def new_details_parsing_package():
         ''',
         (n, m))
 
-    # РР·РІР»РµРєР°РµРј РІС‹Р±СЂР°РЅРЅС‹Рµ СЃС‚СЂРѕРєРё
+    # Извлекаем выбранные строки
     rows = cursor.fetchall()
 
-    # Р—Р°РєСЂС‹РІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ
+    # Закрываем соединение
     conn.close()
 
-    # РЎРѕР·РґР°РµРј СЃРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№ РЅР° РѕСЃРЅРѕРІРµ РІС‹Р±СЂР°РЅРЅС‹С… СЃС‚СЂРѕРє
+    # Создаем список словарей на основе выбранных строк
     data = []
     for row in rows:
         id, title, link = row
@@ -81,21 +82,21 @@ def new_details_parsing_package():
             "title": title,
             "link": link,
         })
-        print(row)
+        # print(row)
 
     return data
 
 
 def key_translation(ru_key):
     translation_dict = {
-        'РђРІС‚РѕСЂ': 'author',
-        'Р§РёС‚Р°РµС‚': 'reading',
-        'Р“РѕРґ': 'year',
-        'Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ': 'duration',
-        'РљР°С‡РµСЃС‚РІРѕ': 'quality',
-        'Р¦РёРєР»': 'cycle',
-        'Р Р°Р·РјРµСЂ': 'size',
-        'Р–Р°РЅСЂ': 'genre'
+        'Автор': 'author',
+        'Читает': 'reading',
+        'Год': 'year',
+        'Длительность': 'duration',
+        'Качество': 'quality',
+        'Цикл': 'cycle',
+        'Размер': 'size',
+        'Жанр': 'genre'
     }
     return translation_dict.get(ru_key, ru_key)
 
@@ -103,43 +104,58 @@ def key_translation(ru_key):
 def save(comps):
     with open('pars01_info.txt', 'a') as file:
         for comp in comps:
-            file.write(f"{comp['title']}\nРћРїРёСЃР°РЅРёРµ: {comp['text']}\nРЎСЃС‹Р»РєР°: {comp['link']}\n\n")
+            file.write(f"{comp['title']}\nОписание: {comp['text']}\nСсылка: {comp['link']}\n\n")
 
 
 '''
-Р¤СѓРЅРєС†РёСЏ РїСЂРёРЅРёРјР°РµС‚ СЃС‚СЂР°РЅРёС†С‹ РґР»СЏ РїР°СЂСЃРёРЅРіР° Рё РІРѕР·СЂР°С‰Р°РµС‚ СЃР»РѕРІР°СЂСЊ СЃ СЂРµР·СѓР»СЊС‚Р°С‚Р°РјРё
+Функция принимает страницы для парсинга и возращает словарь с результатами
 '''
 def parser(id_books, title, url):
-    # РЎРѕР·РґР°РґРёРј РїРµСЂРµРјРµРЅРЅСѓСЋ РІ РєРѕС‚РѕСЂРѕР№ Р±СѓРґРµРј С…СЂР°РЅРёС‚СЊ Р°РґСЂРµСЃ СЃР°Р№С‚Р°, РєРѕС‚РѕСЂС‹Р№ С…РѕС‚РёРј РїР°СЂСЃРёС‚СЊ
+    # Создадим переменную в которой будем хранить адрес сайта, который хотим парсить
     url_base = 'https://baza-knig.ink/'
 
-    # Р’ РїРµСЂРµРјРµРЅРЅСѓСЋ СЃРѕС…СЂР°РЅРёРј СЋР·РµСЂ-Р°РіРµРЅС‚, С‡С‚Рѕ-Р±С‹ Р±СЂР°СѓР·РµСЂ РЅРµ СЃС‡РёС‚Р°Р» РЅР°С€Рё РѕР±СЂР°С‰РµРЅРёСЏ РєР°Рє РґРµР№СЃС‚РІРёСЏ Р±РѕС‚Р°
+    # В переменную сохраним юзер-агент, что-бы браузер не считал наши обращения как действия бота
     # HEADERS = {
     #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
     # }
-    HEADERS = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)'
-    }
+    # HEADERS = {
+    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)'
+    # }
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OPR/100.0.0.0 (Edition Yx 03)",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.41 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.41",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 OPR/77.0.4054.277",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Vivaldi/4.1.2369.21",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edge/91.0.864.41",
+    ]
 
-    # РѕС‚РїСЂР°РІРёРј Р·Р°РїСЂРѕСЃ РЅР° СЃРµСЂРІРµСЂ
+    # отправим запрос на сервер
     max_retries = 3
     retries = 0
 
     while retries < max_retries:
         try:
-            response = requests.get(url, headers=HEADERS, timeout=5)
-            response.raise_for_status()  # РџСЂРѕРІРµСЂСЏРµРј, Р±С‹Р» Р»Рё СѓСЃРїРµС€РЅС‹Р№ Р·Р°РїСЂРѕСЃ
-            break  # Р’С‹С…РѕРґ РёР· С†РёРєР»Р°, РµСЃР»Рё Р·Р°РїСЂРѕСЃ РїСЂРѕС€РµР» СѓСЃРїРµС€РЅРѕ
+            HEADERS = {'User-Agent': random.choice(user_agents)}
+            response = requests.get(url, headers=HEADERS, timeout=3)
+            response.raise_for_status()  # Проверяем, был ли успешный запрос
+            break  # Выход из цикла, если запрос прошел успешно
         except Timeout as e:
             retries += 1
             if retries < max_retries:
-                print(f"РћС€РёР±РєР°: {e}. РџРѕРІС‚РѕСЂРЅР°СЏ РїРѕРїС‹С‚РєР° С‡РµСЂРµР· 5 СЃРµРєСѓРЅРґ (РїРѕРїС‹С‚РєР° {retries}/{max_retries}).")
-                time.sleep(5)
+                print(f"Ошибка:\n{e}.\nПовторная попытка через 3 секунд (попытка {retries}/{max_retries}).")
+                time.sleep(3)
             else:
-                print(f"Р”РѕСЃС‚РёРіРЅСѓС‚Рѕ РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРѕРїС‹С‚РѕРє. РџСЂРµРєСЂР°С‰Р°РµРј РїРѕРІС‚РѕСЂРЅС‹Рµ РїРѕРїС‹С‚РєРё.")
+                print(f"Достигнуто максимальное количество попыток. Прекращаем повторные попытки.")
                 return
         except Exception as e:
-            print(f"РќРµРѕР¶РёРґР°РЅРЅР°СЏ РѕС€РёР±РєР°: {e}")
+            print(f"Неожиданная ошибка:\n{e}")
             return
 
 
@@ -147,7 +163,7 @@ def parser(id_books, title, url):
     soup = BeautifulSoup(response.content, 'html.parser')
     comps = {}
 # -----------------------------------------------
-    # РћР±С‰Р°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ РїРѕ РєРЅРёРіРµ
+    # Общая информация по книге
     items = soup.find('ul', class_="reset full-items")
     if items:
         li_items = items.find_all('li')
@@ -156,31 +172,31 @@ def parser(id_books, title, url):
             value = li.contents[1].text.strip()
             comps[key_translation(key)] = value
 # -----------------------------------------------
-    # РР·РІР»РµРєР°РµРј РѕРїРёСЃР°РЅРёРµ РєРЅРёРіРё РёР· <div> СЃ РєР»Р°СЃСЃРѕРј "short-text"
+    # Извлекаем описание книги из <div> с классом "short-text"
     description = soup.find('div', class_="short-text").get_text(strip=True)
     if description:
-        # Р РµРґР°РєС‚РёСЂСѓРµРј РѕРїРёСЃР°РЅРёРµ СЃ РїРѕРјРѕС‰СЊСЋ СЂРµРіСѓР»СЏСЂРЅС‹С… РІС‹СЂР°Р¶РµРЅРёР№ Get re
-        # РЈРґР°Р»РµРЅРёРµ РІСЃРµРіРѕ, РЅР°С‡РёРЅР°СЏ СЃ РїРµСЂРІРѕРіРѕ СЃРёРјРІРѕР»Р° "\n" Рё РїРѕСЃР»Рµ
+        # Редактируем описание с помощью регулярных выражений Get re
+        # Удаление всего, начиная с первого символа "\n" и после
         description = re.sub(r'\n.*', '', description)
 
-        # РЈРґР°Р»РµРЅРёРµ РІСЃРµРіРѕ РґРѕ "РїСЂРѕС‡С‚Рё РѕРїРёСЃР°РЅРёРµ:", РІРєР»СЋС‡Р°СЏ СЃР°РјСѓ С„СЂР°Р·Сѓ.
-        description = re.sub(r'^.*?РїСЂРѕС‡С‚Рё РѕРїРёСЃР°РЅРёРµ:', '', description, flags=re.DOTALL)
+        # Удаление всего до "прочти описание:", включая саму фразу.
+        description = re.sub(r'^.*?прочти описание:', '', description, flags=re.DOTALL)
 
-        # РЈРґР°Р»РµРЅРёРµ РїСЂРѕР±РµР»СЊРЅС‹С… СЃРёРјРІРѕР»РѕРІ Рё СЃРёРјРІРѕР»Р° РїРµСЂРµРІРѕРґР° СЃС‚СЂРѕРєРё РІ РЅР°С‡Р°Р»Рµ Рё РєРѕРЅС†Рµ
+        # Удаление пробельных символов и символа перевода строки в начале и конце
         description = description.strip()
-        # Р”РѕР±Р°РІР»СЏРµРј `РїР°СЂСѓ` РІ СЃР»РѕРІР°СЂСЊ
+        # Добавляем `пару` в словарь
         comps['description'] = description
 # -----------------------------------------------
-    # РџРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ РґР»СЏ РєР°СЂС‚РёРЅРєРё
+    # Получаем данные для картинки
     img_element = soup.find("div", class_="full-img")
     if img_element and 'src' in img_element.img.attrs:
         img_url = img_element.img['src']
-        # img_ext = img_url.split(".")[-1]  # РїРѕР»СѓС‡РёРј СЂР°СЃС€РёСЂРµРЅРёРµ РєР°СЂС‚РёРЅРєРё
+        # img_ext = img_url.split(".")[-1]  # получим расширение картинки
 
-        # Р”РѕР±Р°РІР»СЏРµРј РїСЂРµС„РёРєСЃ Рє URL
+        # Добавляем префикс к URL
         img_url = url_base + img_url
 
-        # Р—Р°РіСЂСѓР¶Р°РµРј РєР°СЂС‚РёРЅРєСѓ
+        # Загружаем картинку
         picture = download_image(response, img_url, id_books, title)
         if picture is not None:
             comps['path_picture'] = picture[0]
@@ -193,35 +209,31 @@ def parser(id_books, title, url):
     print(comps)
 
 
-# Р¤СѓРЅРєС†РёСЏ РґР»СЏ Р·Р°РіСЂСѓР·РєРё Рё СЃРѕС…СЂР°РЅРµРЅРёСЏ РєР°СЂС‚РёРЅРєРё
+# Функция для загрузки и сохранения картинки
 def download_image(response, url, id_books, title):
-    if response.status_code == 200:
-        # РЎРѕР±РёСЂР°РµРј РїСѓС‚СЊ Рє РѕР±С‰РµР№ РїР°РїРєe РєР°СЂС‚РёРЅРѕРє
-        path_shared_images_folder = os.path.join(path_current_directory, "Downloads_picture")
-        if not os.path.exists(path_shared_images_folder):
-            os.makedirs(path_shared_images_folder)  # РЎРѕР·РґР°РµРј РґРёСЂРµРєС‚РѕСЂРёСЋ, РµСЃР»Рё РѕРЅР° РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    # Собираем путь к общей папкe картинок
+    path_shared_images_folder = os.path.join(path_current_directory, "Downloads_picture")
+    if not os.path.exists(path_shared_images_folder):
+        os.makedirs(path_shared_images_folder)  # Создаем директорию, если она не существует
 
-        # РћРїСЂРµРґРµР»РёРј РёРјСЏ СЃРѕСЂС‚РёСЂРѕРІР°С‡РЅРѕР№ РїР°РїРєРё
-        path_picture = str(id_books // 1000)
+    # Определим имя сортировачной папки
+    path_picture = str(id_books // 1000)
 
-        # РџРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє СЃРѕСЂС‚РёСЂРѕРІР°С‡РЅРѕР№ РїР°РїРєРµ
-        download_dir = os.path.join(path_shared_images_folder, path_picture)
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)  # РЎРѕР·РґР°РµРј РґРёСЂРµРєС‚РѕСЂРёСЋ, РµСЃР»Рё РѕРЅР° РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    # Полный путь к сортировачной папке
+    download_dir = os.path.join(path_shared_images_folder, path_picture)
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)  # Создаем директорию, если она не существует
 
-        # РћРїСЂРµРґРµР»РёРј РЅРѕРІРѕРµ РёРјСЏ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-        img_ext = url.split(".")[-1]  # РїРѕР»СѓС‡РёРј СЂР°СЃС€РёСЂРµРЅРёРµ РєР°СЂС‚РёРЅРєРё РёР· url
-        filename = f'{clean_filename(title).replace(" ", "_")}_{id_books}.{img_ext}'
-        filepath = os.path.join(download_dir, filename)
+    # Определим новое имя изображения
+    img_ext = url.split(".")[-1]  # получим расширение картинки из url
+    filename = f'{clean_filename(title).replace(" ", "_")}_{id_books}.{img_ext}'
+    filepath = os.path.join(download_dir, filename)
 
-        # РЎРѕС…СЂР°РЅСЏРµРј РєР°СЂС‚РёРЅРєСѓ
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
-        return [path_picture, filename]
+    # Сохраняем картинку
+    with open(filepath, 'wb') as f:
+        f.write(response.content)
+    return [path_picture, filename]
 
-    else:
-        print(f"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РєР°СЂС‚РёРЅРєСѓ. РљРѕРґ СЃС‚Р°С‚СѓСЃР°: {response.status_code}")
-        return None
 
 
 if __name__ == "__main__":
