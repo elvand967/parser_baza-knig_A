@@ -61,36 +61,6 @@ def get_default_download_directory():
         print(f"Error accessing the registry: {e}")
         return None
 
-#
-# ''' Функция возвращает путь к директории Downloads windows по умолчанию'''
-# def get_default_download_directory():
-#     key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
-#     value_name = "{374DE290-123F-4565-9164-39C4925E467B}"
-#
-#     try:
-#         # Открываем соответствующий ключ в реестре
-#         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
-#             # Получаем значение пути к директории Downloads
-#             download_path, _ = winreg.QueryValueEx(key, value_name)
-#
-#             # Преобразуем в абсолютный путь
-#             download_path = os.path.expanduser(download_path)
-#
-#             # Экранируем символы обратного слеша
-#             download_path = download_path.replace("\\", "\\\\")
-#
-#             # Проверяем, существует ли директория
-#             if os.path.exists(download_path):
-#                 return download_path
-#             else:
-#                 print(f"The directory '{download_path}' does not exist.")
-#                 return None
-#
-#     except Exception as e:
-#         print(f"Error accessing the registry: {e}")
-#         return None
-
-
 
 ''' Простая функция транслитерации кирилицы в латиницу'''
 def transliterate(text):
@@ -206,6 +176,13 @@ def format_time(seconds):
         return f"{int(seconds):02d} сек."
 
 
+''' Функция 'write_json_file(file_path, data)' принимает директорию, путь к JSON файлу
+и список словарей (или других объектов, которые могут быть сериализованы в JSON)
+Записывает данные (data) в указанный файл.
+Если файл существует, он будет перезаписан новыми данными.   '''
+def write_json_file(path_file_name, data):
+    with open(path_file_name, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -226,7 +203,7 @@ def create_backup(db_file, backup_folder='backup'):
         print(f'Ошибка при создании резервной копии: {e}')
 
 # Вызов функции для создания резервной копии БД
-create_backup("D:\\Python\\myProject\\parser_baza-knig_A\\book_database.db", 'backup')
+# create_backup("D:\\Python\\myProject\\parser_baza-knig_A\\book_database.db", 'backup')
 #++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

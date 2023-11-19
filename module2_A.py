@@ -27,7 +27,8 @@ from selenium.common.exceptions import TimeoutException
 # from datetime import datetime
 # from unidecode import unidecode
 from utils import get_default_download_directory, clean_filename, \
-    read_json_file, my_print, get_files_in_directory, remove_replace_substring_postfix, delete_file, format_time
+    read_json_file, my_print, get_files_in_directory, remove_replace_substring_postfix, delete_file, format_time, \
+    write_json_file
 
 # Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
@@ -442,13 +443,7 @@ def fixing_new_torrent_path(torrent_file, id_books, title):
         return None
 
 
-''' Функция 'write_json_file(file_path, data)' принимает директорию, путь к JSON файлу
-и список словарей (или других объектов, которые могут быть сериализованы в JSON)
-Записывает данные (data) в указанный файл.
-Если файл существует, он будет перезаписан новыми данными.   '''
-def write_json_file(path_file_name, data):
-    with open(path_file_name, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
+
 
 
 

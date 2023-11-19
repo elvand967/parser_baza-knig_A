@@ -6,8 +6,8 @@ from datetime import datetime
 
 
 def main():
-    db_file = '../../book_database.db'
-    # create_backup(db_file)  # Создаем резервную копию БД
+    db_file = 'book_database.db'
+    create_backup(db_file)  # Создаем резервную копию БД
 
     # add_new_column()
     # new_tabl()
@@ -15,8 +15,11 @@ def main():
     # drop_tabl()  # Удаление таблицы
     # new_tabl()
 
-    update_path_torrent()  # Вызов функции для выполнения запроса обновление путей торрент-файлов path//1000
-    # drop_column()    # Создаем резервную копию БД, Удалаляем колонку таблицы "torrent"
+    # drop_tabl('details')
+    # new_tabl_details()
+
+    # update_path_torrent()  # Вызов функции для выполнения запроса обновление путей торрент-файлов path//1000
+    # drop_column()    # Удалаляем колонку таблицы "torrent"
     # count_path_torrent_records()  # подсчет торрент-файлов в папках согласно записей в БД
 
 
@@ -102,7 +105,7 @@ def new_bd_end_tab(database):
 ''' Функция добавляет новую колонку'''
 def add_new_column():
     # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect("../../book_database.db")
+    conn = sqlite3.connect("book_database.db")
     cursor = conn.cursor()
 
     # Добавляем новую колонку "torrent_new" типа TEXT и делаем её уникальной
@@ -118,7 +121,7 @@ def add_new_column():
 ''' Функция выведет имена всех колонок таблицы'''
 def print_name_columns(tabl):
     # Подключение к базе данных
-    conn = sqlite3.connect("../../book_database.db")
+    conn = sqlite3.connect("book_database.db")
 
     # Создание объекта cursor
     cursor = conn.cursor()
@@ -140,10 +143,10 @@ def print_name_columns(tabl):
     conn.close()
 
 
-''' Создаем новую связанную таблицу'''
-def new_tabl():
+''' Создаем новую связанную таблицу `torrent` '''
+def new_tabl_torrent():
     # Подключение к базе данных
-    conn = sqlite3.connect("../../book_database.db")
+    conn = sqlite3.connect("book_database.db")
     cursor = conn.cursor()
 
     # 1. Создаем таблицу "torrent"
@@ -163,14 +166,56 @@ def new_tabl():
     conn.close()
 
 
+''' Создаем новую связанную таблицу `details` '''
+def new_tabl_details():
+    # Подключение к базе данных
+    conn = sqlite3.connect("book_database.db")
+    cursor = conn.cursor()
+
+    # 1. Создаем таблицу "details"
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS details (
+            id INTEGER PRIMARY KEY,
+            id_books INTEGER,
+            link TEXT UNIQUE,
+            author TEXT,
+            reading TEXT,
+            year TEXT,
+            duration TEXT,
+            quality TEXT,  -- качество
+            cycle TEXT,
+            size TEXT,
+            genre TEXT,  -- жанр 
+            description TEXT,  -- описание  
+            picture TEXT UNIQUE,
+            path_picture TEXT,        
+            plot REAL,  -- сюжет
+            writing_talent REAL,  -- писательский талант
+            characters REAL,  -- персонажи
+            voice_quality REAL,  -- качество голоса
+            final_grade REAL,  -- итоговая оценка
+            like INTEGER,
+            dislike INTEGER,
+            comments INTEGER,
+            rating REAL,
+            FOREIGN KEY (id_books) REFERENCES books (id)  -- Добавлена запятая перед FOREIGN
+        )
+    ''')
+
+    # Сохраняем изменения и закрываем соединение
+    conn.commit()
+    conn.close()
+
+
+
 ''' Функция удаляет таблицу'''
-def drop_tabl():
+def drop_tabl(name_tabl):
     # Устанавливаем соединение с базой данных
-    conn = sqlite3.connect("../../book_database.db")
+    conn = sqlite3.connect("book_database.db")
     cursor = conn.cursor()
 
     # Удаляем текущую таблицу
-    cursor.execute("DROP TABLE books_temp")
+    cursor.execute(f"DROP TABLE {name_tabl}")
 
     # Сохраняем изменения
     conn.commit()
@@ -183,7 +228,7 @@ def drop_tabl():
 def drop_column():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("../../book_database.db")
+        conn = sqlite3.connect("book_database.db")
         cursor = conn.cursor()
 
         # Отключение внешних ключей
@@ -226,7 +271,7 @@ def drop_column():
 def update_path_torrent():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("../../book_database.db")
+        conn = sqlite3.connect("book_database.db")
         cursor = conn.cursor()
 
         # SQL-запрос для обновления path_torrent
@@ -265,7 +310,7 @@ def update_path_torrent():
 def count_path_torrent_records():
     try:
         # Подключение к базе данных
-        conn = sqlite3.connect("../../book_database.db")
+        conn = sqlite3.connect("book_database.db")
         cursor = conn.cursor()
 
         # SQL-запрос для подсчета количества записей для каждого значения path_torrent
