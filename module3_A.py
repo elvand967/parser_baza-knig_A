@@ -299,9 +299,29 @@ def parser(id_books, title, url):
     voice_quality_rating = soup.find('div', {'class': 'multirating-item', 'data-area': 'pisatel'})
     writing_talent_rating = soup.find('div', {'class': 'multirating-item', 'data-area': 'ispolnitel1'})
     final_grade = soup.find('div', {'class': 'multirating-itog'}).find('b', {'class': 'multirating-itog-rateval'})
-    like_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Нравится(+)'}).text.strip()
-    dislike_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Не нравится(-)'}).text.strip()
-    comments_count = soup.find('div', {'class': 'comments'}).text.strip()
+    # like_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Нравится(+)'}).text.strip()
+    # dislike_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Не нравится(-)'}).text.strip()
+    # comments_count = soup.find('div', {'class': 'comments'}).text.strip()
+
+    # Обработка для тегов, которые могут отсутствовать
+    # try:
+    #     final_grade = soup.find('div', {'class': 'multirating-itog'}).find('b', {'class': 'multirating-itog-rateval'}).text.strip()
+    # except AttributeError:
+    #     final_grade = "0"
+    try:
+        like_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Нравится(+)'}).text.strip()
+    except AttributeError:
+        like_count = "0"
+
+    try:
+        dislike_count = soup.find('div', {'class': 'short-rate'}).find('a', {'title': 'Не нравится(-)'}).text.strip()
+    except AttributeError:
+        dislike_count = "0"
+
+    try:
+        comments_count = soup.find('div', {'class': 'comments'}).text.strip()
+    except AttributeError:
+        comments_count = "0"
 
     # Обновляем словарь comps новыми данными
     comps.update({
