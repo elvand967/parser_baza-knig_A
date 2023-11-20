@@ -11,6 +11,7 @@ import re
 import sqlite3
 import sys
 import time
+from datetime import datetime
 import random
 # pip install requests
 import requests
@@ -18,10 +19,16 @@ import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import Timeout
 
-from utils import clean_filename
+from utils import clean_filename, my_print, format_time
 
 # Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
+
+# Формируем имя лог-файла MY_LOG
+now = datetime.now()
+script_path = os.path.basename(sys.argv[0])
+script_name, _ = os.path.splitext(script_path)
+MY_LOG = now.strftime("%Y-%m-%d_%H-%M_") + script_name + ".txt"
 
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
@@ -40,8 +47,23 @@ user_agents = [
 
 
 def main():
+    path_log_files = os.path.join(path_current_directory, "Log_files")
+    if not os.path.exists(path_log_files):
+        os.makedirs(path_log_files)  # -//-
+
+    global MY_LOG
+    MY_LOG = os.path.join(path_log_files, MY_LOG)
+    # Засекаем начало времени работы кода
+    start_pars = time.time()
+    formatted_start_time = datetime.fromtimestamp(start_pars).strftime("%Y.%m.%d %H:%M")
+
+
+
     menu_mode = menu_script_mode()
     if menu_mode == 1:
+        global script_name
+
+
         # Список словарей для парсинга
         List_dict_parsing = new_details_parsing_package()
         total_dict = len(List_dict_parsing)
@@ -50,7 +72,9 @@ def main():
         if next_parsing.upper() == 'X' or next_parsing.upper() == 'Ч':
             print('Выход')
             sys.exit()  # Выходим из программы
-
+        my_print(MY_LOG, f'\n------------------------------\n'
+                         f'{formatted_start_time}  Старт скрипта "{script_name}"\n'
+                         f'------------------------------')
         ii = 0
         for i, item in enumerate(List_dict_parsing):
             # Запускаем парсер
@@ -65,6 +89,14 @@ def main():
             delay = round(random.uniform(0.5, 2.0), 1)
             time.sleep(delay)
 
+        end_pars = time.time()
+        # Посчитаем время затраченное на парсинг URL
+        # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
+        all_time = format_time(end_pars - start_pars)
+        my_print(MY_LOG, f'------------------------------\n'
+                         f'Общее время парсинга: {all_time}\n'
+                         f'------------------------------\n')
+
     elif  menu_mode == 2:
         # Пример использования
         downloads_path = 'Downloads_picture'
@@ -73,6 +105,8 @@ def main():
 
     else:
         return
+
+
 
 
 def menu_script_mode():
@@ -185,17 +219,20 @@ def parser(id_books, title, url):
         except Timeout as e:
             retries += 1
             if retries < max_retries:
-                print(f"Ошибка:\n{e}.\n"
-                      f"{id_books} {title}: {url}\n"
-                      f"Повторная попытка парсинга страницы через 3 секунд (попытка {retries}/{max_retries}).")
+                my_print(MY_LOG, f"    {id_books} {title}: {url}\n"
+                      f"    Ошибка:\n"
+                      f"    {e}.\n"
+                      f"    Повторная попытка парсинга страницы через 3 секунд (попытка {retries}/{max_retries}).\n")
                 time.sleep(3)
             else:
-                print(f"Достигнуто максимальное количество попыток парсинга страницы.\n"
-                      f"{id_books} {title}: {url}\n"
-                      f"Прекращаем повторные попытки.")
+                my_print(MY_LOG, f"    Достигнуто максимальное количество попыток парсинга страницы.\n"
+                      f"    {id_books} {title}: {url}\n"
+                      f"    Прекращаем повторные попытки.\n")
                 return None
         except Exception as e:
-            print(f"Неожиданная ошибка:\n{e}")
+            my_print(MY_LOG, f"    Неожиданная ошибка:\n"
+                             f"    {id_books} {title}: {url}\n"
+                             f"    {e}\n")
             return None
 
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -318,17 +355,20 @@ def download_image(url, id_books, title):
         except Timeout as e:
             retries += 1
             if retries < max_retries:
-                print(f"Ошибка:\n{e}.\n"
-                      f"{id_books} {title}: {url}\n"
-                      f"Повторная попытка загрузки картинки через 3 секунд (попытка {retries}/{max_retries}).")
+                my_print(MY_LOG,f"    {id_books} {title}: {url}\n"
+                      f"    Ошибка:\n"
+                      f"    {e}.\n"
+                      f"    Повторная попытка загрузки картинки через 3 секунд (попытка {retries}/{max_retries}).\n")
                 time.sleep(3)
             else:
-                print(f"Достигнуто максимальное количество попыток загрузки картинки."
-                      f"{id_books} {title}: {url}\n"
-                      f"\nПрекращаем повторные попытки.")
+                my_print(MY_LOG, f"    Достигнуто максимальное количество попыток загрузки картинки.\n"
+                      f"    {id_books} {title}: {url}\n"
+                      f"    Прекращаем повторные попытки.\n")
                 return
         except Exception as e:
-            print(f"Неожиданная ошибка:\n{e}")
+            my_print(MY_LOG,f"    {id_books} {title}: {url}\n"
+                  f"Неожиданная ошибка:\n"
+                  f"    {e}\n")
             return
 
     if response.status_code == 200:
@@ -356,7 +396,8 @@ def download_image(url, id_books, title):
         return [path_picture, filename]
 
     else:
-        print(f"Не удалось загрузить картинку. Код статуса: {response.status_code}")
+        print(f"Не удалось загрузить картинку для id: {id_books} books.\n"
+              f"Код статуса: {response.status_code}")
         return None
 
 
