@@ -1,11 +1,12 @@
+# -*- coding: cp1251 -*-
 # D:\Python\myProject\parser_baza-knig_A\module2_A.py
 
 '''
-Р’ СЌС‚РѕРј РјРѕРґСѓР»Рµ Р·Р°РіСЂСѓР¶Р°РµРј С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»С‹, РёРјРµСЋС‰РёРµСЃСЏ РЅР° web-СЃС‚СЂР°РЅРёС†Р°С…
-URL РєРѕС‚РѕСЂС‹С… РїРѕР»СѓС‡РµРЅРЅС‹ РёР· book_database.db books (link).
-РџСЂРё СЌС‚Рѕ Р·Р°РіСЂСѓР¶Р°РµРј С‚РѕР»СЊРєРѕ С‚Рµ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»С‹ Рѕ РєРѕС‚РѕСЂС‹С… Р·Р°РїРёСЃРё РІ book_database.db torrent (torrent) РЅРµС‚.
+В этом модуле загружаем торрент-файлы, имеющиеся на web-страницах
+URL которых полученны из book_database.db books (link).
+При это загружаем только те торрент-файлы о которых записи в book_database.db torrent (torrent) нет.
 
-Р›РѕРі-С„Р°Р№Р»С‹ РїРёС€РµРј СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё my_print(name_path, text)
+Лог-файлы пишем с помощью функции my_print(name_path, text)
 
 '''
 import json
@@ -15,7 +16,7 @@ import sqlite3
 import sys
 import time
 from datetime import datetime
-import winreg  # РґР»СЏ РґРѕСЃС‚СѓРїР° Рє СЂРµРµСЃС‚СЂСѓ Windows РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РїРѕР»СѓС‡РµРЅРёСЏ РїСѓС‚Рё Рє РїР°РїРєРµ Р·Р°РіСЂСѓР·РєРё Р±СЂР°СѓР·РµСЂРѕРІ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+import winreg  # для доступа к реестру Windows при необходимости получения пути к папке загрузки браузеров по умолчанию
 import random
 
 import pyautogui
@@ -30,29 +31,29 @@ from utils import get_default_download_directory, clean_filename, \
     read_json_file, my_print, get_files_in_directory, remove_replace_substring_postfix, delete_file, format_time, \
     write_json_file
 
-# Р”РёСЂРµРєС‚РѕСЂРёСЏ РІ РєРѕС‚РѕСЂРѕР№ СЂР°Р·РјРµС‰РµРЅ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ СЃРєСЂРёРїС‚ 'module2_A.py '
+# Директория в которой размещен исполняемый скрипт 'module2_A.py '
 path_current_directory = os.path.abspath(os.path.dirname(__file__))
 
-# РџСѓС‚СЊ Рє РїР°РїРєРµ downloads СЃРёСЃС‚РµРјС‹ windows РїРѕР»СѓС‡РёРј СЃ РїРѕРјРѕС‰СЊСЋ РЅР°С€РµР№ С„СѓРЅРєС†РёРё
+# Путь к папке downloads системы windows получим с помощью нашей функции
 download_folder = get_default_download_directory()
 
-# РџСѓС‚СЊ Рє РїР°РїРєРµ downloads РїСЂРѕРіСЂР°РјРјС‹, РґР»СЏ СЃРѕСЂС‚РёСЂРѕРІРєРё Рё С…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРЅС‹С… С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ
+# Путь к папке downloads программы, для сортировки и хранения переименованных торрент-файлов
 path_dir_downloads_torrent = ''
 
-# Р¤РѕСЂРјРёСЂСѓРµРј РёРјСЏ Р»РѕРі-С„Р°Р№Р»Р° MY_LOG
+# Формируем имя лог-файла MY_LOG
 now = datetime.now()
 script_path = os.path.basename(sys.argv[0])
 script_name, _ = os.path.splitext(script_path)
 MY_LOG = now.strftime("%Y-%m-%d_%H-%M_") + script_name + ".txt"
 
 def main():
-    # РѕРїСЂРµРґРµР»РёРј РѕСЃРЅРѕРІРЅС‹Рµ РґРёСЂРµРєС‚РѕСЂРёРё
-    # Р”РёСЂРµРєС‚РѕСЂРёСЏ РІ РєРѕС‚РѕСЂРѕР№ СЂР°Р·РјРµС‰РµРЅ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ СЃРєСЂРёРїС‚ 'module2_A.py '
+    # определим основные директории
+    # Директория в которой размещен исполняемый скрипт 'module2_A.py '
     global path_current_directory
 
     path_dir_Get = os.path.join(path_current_directory, "JSONfiles\\Get")
     if not os.path.exists(path_dir_Get):
-        os.makedirs(path_dir_Get)  # РЎРѕР·РґР°РµРј РґРёСЂРµРєС‚РѕСЂРёСЋ, РµСЃР»Рё РѕРЅР° РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+        os.makedirs(path_dir_Get)  # Создаем директорию, если она не существует
     path_dir_Set = os.path.join(path_current_directory, "JSONfiles\\Set")
     if not os.path.exists(path_dir_Set):
         os.makedirs(path_dir_Set)  # -//-
@@ -69,148 +70,166 @@ def main():
     global MY_LOG
     MY_LOG = os.path.join(path_log_files, MY_LOG)
 
-    # Р—Р°СЃРµРєР°РµРј РЅР°С‡Р°Р»Рѕ РІСЂРµРјРµРЅРё СЂР°Р±РѕС‚С‹ РєРѕРґР°
+    # Засекаем начало времени работы кода
     start_time_pars = time.time()
     formatted_start_time = datetime.fromtimestamp(start_time_pars).strftime("%Y.%m.%d %H:%M")
 
     global script_name
-    my_print(MY_LOG, f'{formatted_start_time} РЎС‚Р°СЂС‚ СЃРєСЂРёРїС‚Р° {script_name}')
+    my_print(MY_LOG, f'{formatted_start_time} Старт скрипта {script_name}')
 
-    # Р—Р°РїСѓСЃРєР°РµРј РјРµРЅСЋ "Р РµР¶РёРј СЂР°Р±РѕС‚С‹ СЃРєСЂРёРїС‚Р°"
+    # Запускаем меню "Режим работы скрипта"
     menu_mode = menu_script_mode()
-    if menu_mode == 1:  # Р РµР¶РёРј: "РџР°РєРµС‚С‹ Р·Р°РіСЂСѓР·РєРё (РѕР±СЂР°Р±РѕС‚РєР° JSON, Р·Р°РіСЂСѓР·РєР° С‚РѕСЂСЂРµРЅС‚ С„Р°Р№Р»РѕРІ)"
-        # Р’С‹Р·РѕРІРёРј РјРµРЅСЋ РІС‹Р±РѕСЂР° РїР°РєРµС‚РѕРІ Р·Р°РіСЂСѓР·РєРё
+    if menu_mode == 1:  # Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
+        # Вызовим меню выбора пакетов загрузки
         path_GetJson_download_package = menu_packages_downloads(path_dir_Get, menu_mode)
 
-        # РµСЃР»Рё С„СѓРЅРєС†РёСЏ РЅР°Рј РІРµСЂРЅСѓР»Р° РїСѓС‚СЊ Рє *.json С„Р°Р№Р»Сѓ РЅР°С‡РЅРµРј Р·Р°РіСЂСѓР·РєСѓ С‚РѕСЂСЂРµРЅС‚РѕРІ
+        # если функция нам вернула путь к *.json файлу начнем загрузку торрентов
         if path_GetJson_download_package is not None:
             general_functions_torrent(path_GetJson_download_package)
 
-    elif menu_mode == 2:  # 'Р РµР¶РёРј: "Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… РґР°РЅРЅС‹С… РІ Р‘Р”"'
-        # Р’С‹Р·РѕРІРёРј РјРµРЅСЋ РІС‹Р±РѕСЂР° РїР°РєРµС‚РѕРІ Р·Р°РіСЂСѓР·РєРё
+    elif menu_mode == 2:  # 'Режим: "Регистрация загруженных данных в БД"'
+        # Вызовим меню выбора пакетов загрузки
         path_SetJson_download_package = menu_packages_downloads(path_dir_Set, menu_mode)
 
-        # РµСЃР»Рё С„СѓРЅРєС†РёСЏ РЅР°Рј РІРµСЂРЅСѓР»Р° РїСѓС‚СЊ Рє *.json С„Р°Р№Р»Сѓ РЅР°С‡РЅРµРј Р·Р°РіСЂСѓР·РєСѓ РІ Р±Р°Р·Сѓ РґР°РЅРЅС‹С…
+        # если функция нам вернула путь к *.json файлу начнем загрузку в базу данных
         if path_SetJson_download_package is not None:
-            # print( f'РљРѕРјР°РЅРґР° РѕР±РЅРѕРІР»СЏС‚СЊ Р‘Р” РёР· {path_SetJson_download_package}')
+            # print( f'Команда обновлять БД из {path_SetJson_download_package}')
             general_functions_torrent_db(path_SetJson_download_package)
 
-    elif menu_mode == 3:  # 'Р РµР¶РёРј: "РЎРІРµСЂРєР° Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ *.db - Downloads_torrent"'
+    elif menu_mode == 3:  # 'Режим: "Сверка загруженных торрент-файлов *.db - Downloads_torrent"'
         downloads_path_torrent = 'Downloads_torrent'
         compare_torrent_files_with_database(downloads_path_torrent, 'book_database.db')
 
 
-# РњРµРЅСЋ: СЂРµР¶РёРј СЂР°Р±РѕС‚С‹ СЃРєСЂРёРїС‚Р°
+# Меню: режим работы скрипта
 def menu_script_mode():
-    print('Р РµР¶РёРјС‹ СЂР°Р±РѕС‚С‹ СЃРєСЂРёРїС‚Р°:\n****************')
-    print('  1: РџР°РєРµС‚С‹ Р·Р°РіСЂСѓР·РєРё (РѕР±СЂР°Р±РѕС‚РєР° JSON, Р·Р°РіСЂСѓР·РєР° С‚РѕСЂСЂРµРЅС‚ С„Р°Р№Р»РѕРІ)')
-    print('  2: Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… РґР°РЅРЅС‹С… РІ Р‘Р”')
-    print('  3: РЎРІРµСЂРєР° Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ СЃ Р‘Р”\n****************')
-    recd = int(input("Р’РІРµРґРёС‚Рµ в„– СЂРµР¶РёРјР° СЂР°Р±РѕС‚С‹: "))
+    print('Режимы работы скрипта:\n****************')
+    print('  1: Пакеты загрузки (обработка JSON, загрузка торрент файлов)')
+    print('  2: Регистрация загруженных данных в БД')
+    print('  3: Сверка загруженных торрент-файлов с БД\n****************')
+    recd = int(input("Введите № режима работы: "))
     if recd == 1:
-        my_print(MY_LOG, 'Р РµР¶РёРј: "РџР°РєРµС‚С‹ Р·Р°РіСЂСѓР·РєРё (РѕР±СЂР°Р±РѕС‚РєР° JSON, Р·Р°РіСЂСѓР·РєР° С‚РѕСЂСЂРµРЅС‚ С„Р°Р№Р»РѕРІ)"')
+        my_print(MY_LOG, 'Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"')
         return 1
     elif recd == 2:
-        my_print(MY_LOG, 'Р РµР¶РёРј: "Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… РґР°РЅРЅС‹С… РІ Р‘Р”"')
+        my_print(MY_LOG, 'Режим: "Регистрация загруженных данных в БД"')
         return 2
     elif recd == 3:
-        my_print(MY_LOG, 'Р РµР¶РёРј: "РЎРІРµСЂРєР° Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ *.db - Downloads_torrent"')
+        my_print(MY_LOG, 'Режим: "Сверка загруженных торрент-файлов *.db - Downloads_torrent"')
         return 3
 
 
-# Р¤СѓРЅРєС†РёСЏ РјРµРЅСЋ, Р РµР¶РёРј: "РџР°РєРµС‚С‹ Р·Р°РіСЂСѓР·РєРё (РѕР±СЂР°Р±РѕС‚РєР° JSON, Р·Р°РіСЂСѓР·РєР° С‚РѕСЂСЂРµРЅС‚ С„Р°Р№Р»РѕРІ)"
+# Функция меню, Режим: "Пакеты загрузки (обработка JSON, загрузка торрент файлов)"
 def menu_packages_downloads(path_dir, menu_mode):
     while True:
-        # РџРѕР»СѓС‡РёРј СЃРїРёСЃРѕРє *.json С„Р°Р№Р»РѕРІ РЅР°С…РѕРґСЏС‰РёС…СЃСЏ РІ РїСЂРёРЅСЏС‚РѕР№ РґРёСЂРµРєС‚РѕСЂРёРё `path_dir`
-        # РёСЃРїРѕР»СЊР·СѓСЏ С„СѓРЅРєС†РёСЋ `get_files_in_directory(dir_path)`
+        # Получим список *.json файлов находящихся в принятой директории `path_dir`
+        # используя функцию `get_files_in_directory(dir_path)`
         list_json = get_files_in_directory(path_dir, '.json')
         if len(list_json):
-            print('\nР”РѕСЃС‚СѓРїРЅС‹ JSON-С„Р°Р№Р»С‹ `РїР°РєРµС‚РѕРІ Р·Р°РіСЂСѓР·РєРё`:\n---------------------')
-            # Р’ С†РёРєР»Рµ РїРµСЂРµР±РµСЂРµРј РІСЃРµ JSON-С„Р°Р№Р»С‹ РІ РїСЂРёРЅСЏС‚РѕР№ РґРёСЂРµРєС‚РѕСЂРёРё `path_dir`
+            print('\nДоступны JSON-файлы `пакетов загрузки`:\n---------------------')
+            # В цикле переберем все JSON-файлы в принятой директории `path_dir`
             for i, file in enumerate(list_json):
-                # СЃРѕР±РµСЂРµРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє С„Р°Р№Р»Сѓ
+                # соберем полный путь к файлу
                 file_path = os.path.join(path_dir, file)
-                # СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё read_json_file(path_json_download_package)
-                # РїСЂРѕС‡С‚РµРј РµРіРѕ, СЃС„РѕСЂРјРёСЂРѕРІР°РІ РІСЂРµРјРµРЅРЅС‹Р№ СЃРїРёСЃРѕРє РµРіРѕ СЃР»РѕРІР°СЂРµР№
-                # С‡С‚Рѕ-Р±С‹ РїРѕСЃС‡РёС‚Р°С‚СЊ РєРѕР»-РІРѕ СЌС‚РёС… СЃР»РѕРІР°СЂРµР№
+                # с помощью функции read_json_file(path_json_download_package)
+                # прочтем его, сформировав временный список его словарей
+                # что-бы посчитать кол-во этих словарей
                 list_dict_json = read_json_file(file_path)
                 if len(list_dict_json) == 0:
                     delete_file(path_dir, file)
                     continue
                 print(f'  {i} : {file}\t [{len(list_dict_json)}]')
         else:
-            print('---------------------\n  РќРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… JSON-С„Р°Р№Р»РѕРІ `РїР°РєРµС‚РѕРІ Р·Р°РіСЂСѓР·РєРё`')
+            print('---------------------\n  Нет доступных JSON-файлов `пакетов загрузки`')
 
         print('  -------------------')
         if menu_mode == 1:
-            print('  N : СЃРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ `РїР°РєРµС‚ Р·Р°РіСЂСѓР·РєРё` (New)')
-        print('  X : Р’С‹С…РѕРґ (Exit)\n---------------------')
+            print('  N : создать новый `пакет загрузки` (New)')
+        print('  X : Выход (Exit)\n---------------------')
 
-        recd = input("Р’РІРµРґРёС‚Рµ РёРЅРґРµРєСЃ `РїР°РєРµС‚Р° Р·Р°РіСЂСѓР·РєРё` РёР»Рё\nР±СѓРєРІСѓ РґР»СЏ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёС… РґРµР№СЃС‚РІРёР№: ")
+        recd = input("Введите индекс `пакета загрузки` или\nбукву для соответствующих действий: ")
 
-        if recd.isdigit():  # РµСЃР»Рё СЃС‚СЂРѕРєР° СЃРѕСЃС‚РѕРёС‚ РёР· С†РёС„СЂ
-            i = int(recd)  # РїСЂРёРІРµРґРµРј Рє СЃРѕРѕС‚РІРµС‚СЃРІСѓСЋС‰РµРјРєСѓ С‚РёРїСѓ
-            if 0 <= i < len(list_json):  # Рё РїСЂРѕРІРµСЂРёРј РІРІРµРґРµРЅ Р»Рё РєРѕСЂСЂРµРєС‚РЅС‹Р№ (РґРѕРїСѓСЃС‚РёРјС‹Р№) РёРЅРґРµРєСЃ
-                my_print(MY_LOG, f'\nРџР°РєРµС‚ Р·Р°РіСЂСѓР·РєРё: {list_json[i]}')
-                # РЎРѕР±РёСЂР°РµРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє С„Р°Р№Р»Сѓ РџР°РєРµС‚Р° Р·Р°РіСЂСѓР·РєРё
+        if recd.isdigit():  # если строка состоит из цифр
+            i = int(recd)  # приведем к соответсвующемку типу
+            if 0 <= i < len(list_json):  # и проверим введен ли корректный (допустимый) индекс
+                my_print(MY_LOG, f'\nПакет загрузки: {list_json[i]}')
+                # Собираем полный путь к файлу Пакета загрузки
                 selected_path_file = os.path.join(path_dir, list_json[i])
                 return selected_path_file
 
-        elif recd.isalpha():  # РµСЃР»Рё СЃС‚СЂРѕРєР° СЃРѕСЃС‚РѕРёС‚ РёР· Р±СѓРєРІ
+        elif recd.isalpha():  # если строка состоит из букв
             if len(recd) == 1:
-                if menu_mode == 1 and (recd.upper() == 'N' or recd.upper() == 'Рў'):
-                    # Р—Р°РїСѓСЃС‚РёРј С„СѓРЅРєС†РёСЋ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕРіРѕ РїР°РєРµС‚Р° Р·Р°РіСЂСѓР·РєРё
+                if menu_mode == 1 and (recd.upper() == 'N' or recd.upper() == 'Т'):
+                    # Запустим функцию создания нового пакета загрузки
                     create_json_with_no_torrent(path_dir)
                     continue
-                elif recd.upper() == 'X' or recd.upper() == 'Р§':
-                    print('Р’С‹С…РѕРґ')
-                    sys.exit()  # Р’С‹С…РѕРґРёРј РёР· РїСЂРѕРіСЂР°РјРјС‹
+                elif recd.upper() == 'X' or recd.upper() == 'Ч':
+                    print('Выход')
+                    sys.exit()  # Выходим из программы
 
         else:
-            # РµСЃР»Рё СЃСЋРґР° РґРѕС€Р»Рё, РїРѕРІС‚РѕСЂРёРј РїРѕРїС‹С‚РєСѓ
-            print('РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ! РџРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.')
+            # если сюда дошли, повторим попытку
+            print('Некорректный ввод! Повторите попытку.')
 
 
-'''РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ `РїР°РєРµС‚ Р·Р°РіСЂСѓР·РєРё`'''
+'''Создаем новый `пакет загрузки`'''
 def create_json_with_no_torrent(path_dir_Get):
     global path_current_directory
     global MY_LOG
 
-    print('РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ `РїР°РєРµС‚ Р·Р°РіСЂСѓР·РєРё`\nРЈРєР°Р¶РёС‚Рµ: ' )
-    # Р—Р°РїСЂРѕСЃРёРј Р°СЂРіСѓРјРµРЅС‚С‹ n Рё x
-    n = int(input("РЅР°С‡Р°Р»СЊРЅС‹Р№ id РґРёР°РїРѕР·РѕРЅР° С‚Р°Р±Р»РёС†С‹ `books`: "))
-    m = int(input("РєРѕРЅРµС‡РЅС‹Р№  id РґРёР°РїРѕР·РѕРЅР° С‚Р°Р±Р»РёС†С‹ `books`: "))
+    print('Создаем новый `пакет загрузки`\nУкажите: ' )
+    # Запросим аргументы n и x
+    n = int(input("начальный id диапозона таблицы `books`: "))
+    m = int(input("конечный  id диапозона таблицы `books`: "))
     if m < n:
         m = n
 
-    # Р“РµРЅРµСЂРёСЂСѓРµРј РёРјСЏ JSON-С„Р°Р№Р»Р°
+    # Генерируем имя JSON-файла
     file_json_name = f'Get_torrent({n}-{m}).json'
 
-    # РЎРѕР±РµСЂРµРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє "book_database.db"
+    # Соберем полный путь к "book_database.db"
     name_db = "book_database.db"
     name_db_path = os.path.join(path_current_directory, name_db)
 
-    # РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…
+    # Устанавливаем соединение с базой данных
     conn = sqlite3.connect(name_db_path)
     cursor = conn.cursor()
 
-    # Р’С‹РїРѕР»РЅСЏРµРј SQL-Р·Р°РїСЂРѕСЃ РґР»СЏ РІС‹Р±РѕСЂРєРё РґР°РЅРЅС‹С…
+    # Выполняем SQL-запрос для выборки данных
+
+    # cursor.execute(
+    #     '''
+    #     SELECT books.id, books.title, books.link
+    #     FROM books
+    #     LEFT JOIN torrent ON books.link = torrent.link
+    #     WHERE books.id >= ? AND books.id <= ? AND (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null")
+    #     ''',
+    #     (n, m))
+
+
+    # Доработан SQL-запрос.
+    # Теперь он возращает строки выбранного диапозона для которых
+    # нет записей в связанной с books таблице torrent
+    # и у которых значение столбца равно "1"
     cursor.execute(
         '''
         SELECT books.id, books.title, books.link
         FROM books
         LEFT JOIN torrent ON books.link = torrent.link
-        WHERE books.id >= ? AND books.id <= ? AND (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null")
+        WHERE 
+            books.id >= ? AND books.id <= ? AND 
+            (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null") AND
+            books.there_torrent = 1
         ''',
         (n, m))
 
-    # РР·РІР»РµРєР°РµРј РІС‹Р±СЂР°РЅРЅС‹Рµ СЃС‚СЂРѕРєРё
+    # Извлекаем выбранные строки
     rows = cursor.fetchall()
 
-    # Р—Р°РєСЂС‹РІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ
+    # Закрываем соединение
     conn.close()
 
-    # РЎРѕР·РґР°РµРј СЃРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№ РЅР° РѕСЃРЅРѕРІРµ РІС‹Р±СЂР°РЅРЅС‹С… СЃС‚СЂРѕРє
+    # Создаем список словарей на основе выбранных строк
     data = []
     for row in rows:
         id, title, link = row
@@ -220,260 +239,261 @@ def create_json_with_no_torrent(path_dir_Get):
             "link": link,
         })
 
-    # РЎРѕР±РµСЂРµРј РїСѓС‚СЊ Рё Р·Р°РїРёС€РµРј РґР°РЅРЅС‹Рµ РІ *.json С„Р°Р№Р»
+    # Соберем путь и запишем данные в *.json файл
     file_path = os.path.join(path_dir_Get, file_json_name)
     write_json_file(file_path, data)
-    my_print(MY_LOG, f'РЎРѕР·РґР°РЅ `РїР°РєРµС‚ Р·Р°РіСЂСѓР·РєРё`: {file_json_name}')
+    my_print(MY_LOG, f'Создан `пакет загрузки`: {file_json_name}')
 
 
-''' РћР±С‰Р°СЏ С„СѓРЅРєС†РёСЏ РѕСЂРіР°РЅРёР·Р°С†РёРё Р·Р°РіСЂСѓР·РєРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ.
-РџСЂРёРЅРёРјР°РµС‚ РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє РёСЃС…РѕРґРЅРѕРјСѓ JSON-С„Р°Р№Р»Сѓ, С„РѕСЂРјРёСЂСѓРµС‚ СЃРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№
-РїРѕРґР»РµР¶Р°С‰РёР№ РѕР±СЂР°Р±РѕС‚РєРµ С„СѓРЅРєС†РёРµР№ download_torrent_file(page_url) 
-РїРѕ Р·Р°РіСЂСѓР·РєРµ РєР°Р¶РґРѕРіРѕ РёР· С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ
+''' Общая функция организации загрузки торрент-файлов.
+Принимает полный путь к исходному JSON-файлу, формирует список словарей
+подлежащий обработке функцией download_torrent_file(page_url) 
+по загрузке каждого из торрент-файлов
 '''
 def general_functions_torrent(path_GetJson_download_package):
-    # РџРѕР»СѓС‡РёРј СЃРѕРґРµСЂР¶РёРјРѕРµ РёСЃС…РѕРґРЅРѕРіРѕ JSON-С„Р°Р№Р»Р° РІ РІРёРґРµ СЃРїРёСЃРєР° СЃР»РѕРІР°СЂРµР№
+    # Получим содержимое исходного JSON-файла в виде списка словарей
     list_dict_json_Get = read_json_file(path_GetJson_download_package)
-    # Р•СЃР»Рё РЅРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ РёСЃС…РѕРґРЅС‹Р№ JSON-С„Р°Р№Р»
+    # Если не получилось прочитать исходный JSON-файл
     if list_dict_json_Get is None:
-        print('РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РѕС‚РєСЂС‹С‚СЊ Рё РїСЂРѕС‡РёС‚Р°С‚СЊ JSON С„Р°Р№Р».\nР’С‹С…РѕРґ')
-        sys.exit()  # Р’С‹С…РѕРґРёРј РёР· РїСЂРѕРіСЂР°РјРјС‹
+        print('Неудачная попытка открыть и прочитать JSON файл.\nВыход')
+        sys.exit()  # Выходим из программы
 
-    # РЎРѕР·РґР°РґРёРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ СЃ РёРјРµРЅРµРј РІС‹С…РѕРґРЅРѕРіРѕ JSON С„Р°Р№Р»Р° (~Set_torrent(...-...).json)
-    # Р·Р°РјРµРЅРёРІ РІ СЃС‚СЂРѕРєРµ РїСѓС‚Рё Рё РёРјРµРЅРё С„Р°Р№Р»Р° `Get` РЅР° `Set`
+    # Создадим полный путь с именем выходного JSON файла (~Set_torrent(...-...).json)
+    # заменив в строке пути и имени файла `Get` на `Set`
     path_SetJson_download_package =remove_replace_substring_postfix(path_GetJson_download_package, 'Get', 'Set')
-    # РЎРѕР·РґР°РґРёРј JSON С„Р°Р№Р» (~Set_torrent(...-...).json) СЃ РїСѓСЃС‚С‹Рј СЃРїРёСЃРєРѕРј РёР»Рё РїСЂРѕС‡РёС‚Р°РµРј РµСЃР»Рё РµСЃС‚СЊ
+    # Создадим JSON файл (~Set_torrent(...-...).json) с пустым списком или прочитаем если есть
     list_dict_json_Set = read_json_file(path_SetJson_download_package)
 
     len_Get_json = len(list_dict_json_Get)
-    my_print(MY_LOG, f'РљРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РёСЃС…РѕРґРЅРѕРј Get~.json: {len_Get_json}')
-    my_print(MY_LOG, f'РљРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РёС‚РѕРіРѕРІРѕРј Set~.json: {len(list_dict_json_Set)}\n')
+    my_print(MY_LOG, f'Количество элементов в исходном Get~.json: {len_Get_json}')
+    my_print(MY_LOG, f'Количество элементов в итоговом Set~.json: {len(list_dict_json_Set)}\n')
 
-    # Р—Р°СЃРµРєР°РµРј РЅР°С‡Р°Р»Рѕ РІСЂРµРјРµРЅРё СЂР°Р±РѕС‚С‹ РєРѕРґР°
+    # Засекаем начало времени работы кода
     start_time_pars = time.time()
     formatted_start_time = datetime.fromtimestamp(start_time_pars).strftime("%Y.%m.%d %H:%M")
-    my_print(MY_LOG, f'Р’СЂРµРјСЏ РЅР°С‡Р°Р»Р° Р·Р°РіСЂСѓР·РєРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ: {formatted_start_time}')
+    my_print(MY_LOG, f'Время начала загрузки торрент-файлов: {formatted_start_time}')
 
     items_dict = list(list_dict_json_Get)
 
-    # СЃС‡РµС‚С‡РёРє Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ
+    # счетчик загруженных торрент-файлов
     sum_torrent = 0
 
-    # РќР°С‡РёРЅР°РµРј РіСЂСѓР·РёС‚СЊ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+    # Начинаем грузить торрент-файла
     for i, item in enumerate(items_dict):
-        # Р·Р°СЃРµРєР°РµРј РІСЂРµРјСЏ РѕР±СЂР°Р±РѕС‚РєРё URL - СЃР»РѕРІР°СЂСЏ СЃС‚СЂР°РЅРёС†С‹
+        # засекаем время обработки URL - словаря страницы
         start_time_URL = time.time()
 
         page_url = item["link"]
-        # Р’С‹Р·С‹РІР°РµРј download_torrent_file РґР»СЏ Р·Р°РіСЂСѓР·РєРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+        # Вызываем download_torrent_file для загрузки торрент-файла
         torrent_file = download_torrent_file(page_url)
 
-        my_print(MY_LOG, f'\nР—Р°РіСЂСѓР·РєР° С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р° в„–: {i + 1} РёР· {len_Get_json}')
-        print(f'id_db: {item["id"]}, РєРЅРёРіР° `{item["title"]}`.')
+        my_print(MY_LOG, f'\nЗагрузка торрент-файла №: {i + 1} из {len_Get_json}')
+        # print(f'id_db: {item["id"]}, книга `{item["title"]}`.')
 
-        # Р¤СѓРєСЃРёСЂСѓРµРј СЂРµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹ С„СѓРЅРєС†РёРё
-        # (РёРјСЏ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р° Р»РёР±Рѕ СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ)
+        # Фуксируем результат работы функции
+        # (имя торрент-файла либо сообщение об ошибке)
         if torrent_file is None:
             end_time_URL = time.time()
-            # РџРѕСЃС‡РёС‚Р°РµРј РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРµРєСѓРЅРґ Р·Р°С‚СЂР°С‡РµРЅРЅРѕРµ РЅР° РѕР±СЂР°Р±РѕС‚РєСѓ URL
-            # Рё СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё format_time(seconds) РІРµСЂРЅРµРј РІ С„РѕСЂРјР°С‚Рµ  "hh:mm:ss"
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
             elapsed_time_URL = format_time(end_time_URL - start_time_URL)
             all_time =  format_time(end_time_URL - start_time_pars)
 
             my_print(MY_LOG,
-                     f'!!! РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° Р·Р°РіСЂСѓР·РєРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°,'
-                     # f'\nid_db: {item["id"]}, РєРЅРёРіР° `{item["title"]}`.'
-                     f'\nР’СЂРµРјСЏ РѕР±СЂР°Р±РѕС‚РєРё URL: {elapsed_time_URL}/{all_time}'
-                     f'\nР’СЃРµРіРѕ Р·Р°РіСЂСѓР¶РµРЅРѕ {sum_torrent}/{i + 1}-{len_Get_json}')
+                     f'!!! Неудачная попытка загрузки торрент-файла,'
+                     # f'\nid_db: {item["id"]}, книга `{item["title"]}`.'
+                     f'\nВремя обработки URL: {elapsed_time_URL}/{all_time}'
+                     f'\nВсего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
             continue
         else:
-            # Р¤СѓРєСЃРёСЂСѓРµРј РёРјСЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕРіРѕ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+            # Фуксируем имя загруженного торрент-файла
             item["torrent_old"] = torrent_file
 
-            # Р¤СѓРЅРєС†РёСЏ РїРµСЂРµРёРјРµРЅРѕРІС‹РІР°РЅРёСЏ Рё СЃРѕСЂС‚РёСЂРѕРІРєРё РїРѕ РґРёСЂРµРєС‚РѕСЂРёСЏРј С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ
+            # Функция переименовывания и сортировки по директориям торрент-файлов
             new_torrent_file = fixing_new_torrent_path(torrent_file, item["id"], item["title"])
 
             if new_torrent_file is not None:
                 item["torrent"] = new_torrent_file["torrent"]
                 item["path_torrent"] = new_torrent_file["path_torrent"]
 
-            # РџСЂРё СѓСЃРїРµС€РЅРѕР№ Р·Р°РіСЂСѓР·РєРµ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р° РІРЅРµСЃРµРј РёР·РјРµРЅРµРЅРёСЏ РІ СЃРїРёСЃРєРё СЃР»РѕРІР°СЂРµР№
-            list_dict_json_Set.append(item)  # Р”РѕР±Р°РІРёРј РЅРѕРІС‹Р№ СЃР»РѕРІР°СЂСЊ
-            list_dict_json_Get.remove(item)  # РЈРґРѕР»РёРј СЃС‚Р°СЂС‹Р№ СЃР»РѕРІР°СЂСЊ
+            # При успешной загрузке торрент-файла внесем изменения в списки словарей
+            list_dict_json_Set.append(item)  # Добавим новый словарь
+            list_dict_json_Get.remove(item)  # Удолим старый словарь
 
-            # РћР±РЅРѕРІР»СЏРµРј SetJson-С„Р°Р№Р»
+            # Обновляем SetJson-файл
             write_json_file(path_SetJson_download_package, list_dict_json_Set)
 
-            # РћР±РЅРѕРІР»СЏРµРј GetJson-С„Р°Р№Р»
+            # Обновляем GetJson-файл
             write_json_file(path_GetJson_download_package, list_dict_json_Get)
 
-            # РќРµ Р·Р°Р±СѓРґРёРј РїРѕСЃС‡РёС‚Р°С‚СЊ СѓСЃРїРµС€РЅСѓСЋ Р·Р°РіСЂСѓР·РєСѓ
+            # Не забудим посчитать успешную загрузку
             sum_torrent += 1
 
             end_time_URL = time.time()
-            # РџРѕСЃС‡РёС‚Р°РµРј РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРµРєСѓРЅРґ Р·Р°С‚СЂР°С‡РµРЅРЅРѕРµ РЅР° РѕР±СЂР°Р±РѕС‚РєСѓ URL
-            # Рё СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё format_time(seconds) РІРµСЂРЅРµРј РІ С„РѕСЂРјР°С‚Рµ  "hh:mm:ss"
+            # Посчитаем количество секунд затраченное на обработку URL
+            # и с помощью функции format_time(seconds) вернем в формате  "hh:mm:ss"
             elapsed_time_URL = format_time(end_time_URL - start_time_URL)
             all_time = format_time(end_time_URL - start_time_pars)
             my_print(MY_LOG,
-                     # f'РЈСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ: {torrent_file},\n'
-                     # f'РєРЅРёРіР° `{item["title"]}`, id_db: {item["id"]}.\n'
-                     f'Р’СЂРµРјСЏ РѕР±СЂР°Р±РѕС‚РєРё URL: {elapsed_time_URL}/{all_time}\n'
-                     f'Р’СЃРµРіРѕ Р·Р°РіСЂСѓР¶РµРЅРѕ {sum_torrent}/{i + 1}-{len_Get_json}')
+                     # f'Успешно загружен: {torrent_file},\n'
+                     # f'книга `{item["title"]}`, id_db: {item["id"]}.\n'
+                     f'Время обработки URL: {elapsed_time_URL}/{all_time}\n'
+                     f'Всего загружено {sum_torrent}/{i + 1}-{len_Get_json}')
+
+        # Случайная задержка от 1.0 до 1.5 секунд с шагом 0.1 секунд
+        random_uni = round(random.uniform(1.0, 1.5), 1)
+        time.sleep(random_uni)
 
     end_time_pars = time.time()
     elapsed_time_pars = end_time_pars - start_time_pars
     elapsed_time_formatted = format_time(elapsed_time_pars)
 
-    my_print(MY_LOG, f"\n\nРќР° РѕР±СЂР°Р±РѕС‚РєСѓ {len_Get_json} СЌР»РµРјРµРЅС‚РѕРІ, РІСЃРµРіРѕ Р·Р°С‚СЂР°С‡РµРЅРѕ: {elapsed_time_formatted}")
-    my_print(MY_LOG, f"Р—Р°РіСЂСѓР¶РµРЅРѕ: {sum_torrent} С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ")
-    my_print(MY_LOG, f'\nРС‚РѕРі:'
-                     f'\n- РІ РёСЃС…РѕРґРЅРѕРј `Get~.json` РѕСЃС‚Р°Р»РѕСЃСЊ РЅРµ РѕР±СЂР°Р±РѕС‚Р°РЅРѕ СЌР»РµРјРµРЅС‚РѕРІ: {len(list_dict_json_Get)}')
-    my_print(MY_LOG, f'- РІ РёС‚РѕРіРѕРІРѕРј `Set~.json` РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ: {len(list_dict_json_Set)}\n\n\n\n')
+    my_print(MY_LOG, f"\n\nНа обработку {len_Get_json} элементов, всего затрачено: {elapsed_time_formatted}")
+    my_print(MY_LOG, f"Загружено: {sum_torrent} торрент-файлов")
+    my_print(MY_LOG, f'\nИтог:'
+                     f'\n- в исходном `Get~.json` осталось не обработано элементов: {len(list_dict_json_Get)}')
+    my_print(MY_LOG, f'- в итоговом `Set~.json` количество элементов: {len(list_dict_json_Set)}\n\n\n\n')
 
 
-''' Р¤СѓРЅРєС†РёСЏ СЃРєР°С‡РёРІР°РЅРёСЏ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р° СЃ URL '''
+''' Функция скачивания торрент-файла с URL '''
 def download_torrent_file(url):
     try:
-        # РџСѓС‚СЊ Рє РїР°РїРєРµ downloads РїРѕР»СѓС‡РёРј СЃ РїРѕРјРѕС‰СЊСЋ РЅР°С€РµР№ С„СѓРЅРєС†РёРё
+        # Путь к папке downloads получим с помощью нашей функции
         global download_folder
 
-        # РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє С„Р°Р№Р»РѕРІ РґРѕ СЃРєР°С‡РёРІР°РЅРёСЏ РІ РѕР±С‰РµР№ РїР°РїРєРµ Р·Р°РіСЂСѓР·РѕРє Р±СЂР°СѓР·РµСЂРѕРІ
+        # Получаем список файлов до скачивания в общей папке загрузок браузеров
         filenames_old = set(os.listdir(download_folder))
 
-        # РСЃРїРѕР»СЊР·СѓРµРј Google Chrome РґР»СЏ СЃРєР°С‡РёРІР°РЅРёСЏ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+        # Используем Google Chrome для скачивания торрент-файла
         driver = webdriver.Chrome()
 
-        driver.get(url)  # РћС‚РєСЂС‹РІР°РµРј СЃС‚СЂР°РЅРёС†Сѓ
+        driver.get(url)  # Открываем страницу
 
-        # wait = WebDriverWait(driver, 60)  # РЈРІРµР»РёС‡РёРІР°РµРј РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ +???
-        WebDriverWait(driver, 60)  # РЈРІРµР»РёС‡РёРІР°РµРј РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ +???
+        # wait = WebDriverWait(driver, 60)  # Увеличиваем время ожидания +???
+        WebDriverWait(driver, 60)  # Увеличиваем время ожидания +???
 
-        # РСЃРїРѕР»СЊР·СѓРµРј JavaScript РґР»СЏ РїСЂРѕРєСЂСѓС‚РєРё СЃС‚СЂР°РЅРёС†С‹ РІРЅРёР· РґРѕ РєРѕРЅС†Р°
+        # Используем JavaScript для прокрутки страницы вниз до конца
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-        # РўРµРїРµСЂСЊ РјРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶РёС‚СЊ СЃРєР°С‡РёРІР°РЅРёРµ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+        # Теперь можно продолжить скачивание торрент-файла
 
-        # РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ СЃСЃС‹Р»РєРё РЅР° С‚РѕСЂСЂРµРЅС‚
+        # Проверяем наличие ссылки на торрент
         if driver.find_elements(By.CSS_SELECTOR,
                                 "a[onclick=\"yaCounter46924785.reachGoal('clickTorrent'); return true;\"]"):
             torrent_link_url = driver.find_element(By.CSS_SELECTOR,
                                                    "a[onclick=\"yaCounter46924785.reachGoal('clickTorrent'); return true;\"]")
 
-            # РљР»РёРєР°РµРј РїРѕ СЃСЃС‹Р»РєРµ С‚РѕСЂСЂРµРЅС‚Р°
+            # Кликаем по ссылке торрента
             torrent_link_url.click()
 
-            # wait = WebDriverWait(driver, 60)  # РЈРІРµР»РёС‡РёРІР°РµРј РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ
-            WebDriverWait(driver, 60)  # РЈРІРµР»РёС‡РёРІР°РµРј РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ
+            # wait = WebDriverWait(driver, 60)  # Увеличиваем время ожидания
+            WebDriverWait(driver, 60)  # Увеличиваем время ожидания
 
-            # # РџРѕРґРѕР¶РґРµРј 1-2 СЃРµРєСѓРЅРґС‹
+            # # Подождем 1-2 секунды
             # t1 = random.randint(1, 2)
             # time.sleep(t1)
 
-            #  РџРѕРїСЂРѕР±СѓРµРј Р·Р°РєСЂС‹С‚СЊ РІСЃРїР»С‹РІР°СЋС‰РµРµ РѕРєРЅРѕ, РёРјРёС‚Р°С†РёСЏ РЅР°Р¶Р°С‚РёСЏ РєР»Р°РІРёС€Рё "f12"
+            #  Попробуем закрыть всплывающее окно, имитация нажатия клавиши "f12"
             pyautogui.press('f12')
 
-            # РџРѕРґРѕР¶РґРµРј РµС‰Рµ 2-3 СЃРµРєСѓРЅРґС‹
-            t2 = random.randint(2, 3)
+            # Подождем еще
+            # Случайная задержка от 1.0 до 1.5 секунд с шагом 0.1 секунд
+            t2 = round(random.uniform(1.0, 1.5), 1)
             time.sleep(t2)
 
-            # # Р”РѕР¶РґРµРјСЃСЏ Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»Р°  -???
+            # # Дождемся загрузки файла  -???
             # try:
             #     wait.until(lambda x: any(filename.endswith('.torrent') for filename in os.listdir(download_folder)))
             # except TimeoutException:
-            #     # print("РўРѕСЂСЂРµРЅС‚-С„Р°Р№Р» РЅРµ Р·Р°РіСЂСѓР¶РµРЅ.")
+            #     # print("Торрент-файл не загружен.")
             #     return None
 
-            # РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє С„Р°Р№Р»РѕРІ РїРѕСЃР»Рµ СЃРєР°С‡РёРІР°РЅРёСЏ
+            # Получаем список файлов после скачивания
             filenames_new = set(os.listdir(download_folder))
 
-            # РќР°С…РѕРґРёРј РёРјСЏ РЅРѕРІРѕРіРѕ С„Р°Р№Р»Р°
+            # Находим имя нового файла
             downloaded_file = next(iter(filenames_new - filenames_old), None)
             if downloaded_file is not None:
-                # Р—Р°РєСЂС‹РІР°РµРј Р±СЂР°СѓР·РµСЂ РїРѕСЃР»Рµ СЃРєР°С‡РёРІР°РЅРёСЏ
+                # Закрываем браузер после скачивания
                 driver.quit()
                 return downloaded_file
 
         else:
-            my_print(MY_LOG, f"РўРѕСЂСЂРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+            my_print(MY_LOG, f"Торрент не найден на странице")
             driver.quit()
             return None
 
     except Exception as e:
-        my_print(MY_LOG, f"РћС€РёР±РєР° РїСЂРё СЃРєР°С‡РёРІР°РЅРёРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°: {e}")
+        my_print(MY_LOG, f"Ошибка при скачивании торрент-файла: {e}")
         # driver.quit()
         return None
 
 
-''' Р¤СѓРЅРєС†РёСЏ РїСЂРёРЅРёРјР°РµС‚ РёРјСЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕРіРѕ С„Р°Р№Р»Р° Рё id books
- РєРѕРїРёСЂСѓРµС‚ РµРіРѕ РІ СЃРѕСЂС‚РёСЂРѕРІРѕС‡РЅСѓСЋ РґРёСЂРµРєС‚РѕСЂРёСЋ Рё РїРµСЂРµРёРјРµРЅРѕРІС‹РІР°РµС‚.
- РІРѕР·СЂР°С‰Р°РµС‚ СЃР»РѕРІР°СЂСЊ СЃ СЃС‚Р°СЂС‹Рј, РЅРѕРІС‹Рј РёРјРµРЅРµРј Рё РїСѓС‚РµРј Рє РЅРµРјСѓ
- СѓРґР°Р»СЏРµС‚ СЂР°РЅРµРµ СЃРєР°С‡РµРЅРЅС‹Р№ С„Р°Р№Р»'''
+''' Функция принимает имя загруженного файла и id books
+ копирует его в сортировочную директорию и переименовывает.
+ возращает словарь с старым, новым именем и путем к нему
+ удаляет ранее скаченный файл'''
 def fixing_new_torrent_path(torrent_file, id_books, title):
-    global download_folder  # РџР°РїРєР° Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»РѕРІ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, Р±СЂР°СѓР·РµСЂРѕРІ СЃРёСЃС‚РµРјС‹ windows
-    global path_dir_downloads_torrent  # РћР±С‰Р°СЏ РїР°РїРєР° Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»РѕРІ СЃРєСЂРёРїС‚Р°
+    global download_folder  # Папка загрузки файлов по умолчанию, браузеров системы windows
+    global path_dir_downloads_torrent  # Общая папка загрузки файлов скрипта
 
-    # РћРїСЂРµРґРµР»РёРј РёРјСЏ СЃРѕСЂС‚РёСЂРѕРІР°С‡РЅРѕР№ РїР°РїРєРё
+    # Определим имя сортировачной папки
     subdirectory = str(id_books // 1000)
-    # РЎРѕР±РёСЂР°РµРј РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє СЃРѕСЂС‚РёСЂРѕРІР°С‡РЅРѕР№ РїР°РїРєe
+    # Собираем полный путь к сортировачной папкe
     subdirectory_path = os.path.join(path_dir_downloads_torrent, subdirectory)
-    # РџСЂРѕРІРµСЂСЏРµРј, СЃСѓС‰РµСЃС‚РІСѓРµС‚ Р»Рё СѓРєР°Р·Р°РЅРЅР°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ
+    # Проверяем, существует ли указанная директория
     if not os.path.exists(subdirectory_path):
-        os.makedirs(subdirectory_path)  # РЎРѕР·РґР°РµРј РґРёСЂРµРєС‚РѕСЂРёСЋ, РµСЃР»Рё РѕРЅР° РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+        os.makedirs(subdirectory_path)  # Создаем директорию, если она не существует
 
-    # РћРїСЂРµРґРµР»РёРј РЅРѕРІРѕРµ РёРјСЏ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°
+    # Определим новое имя торрент-файла
     new_name_torrent_file = f'{clean_filename(title).replace(" ", "_")}_{id_books}.{torrent_file.split(".")[-1]}'
 
-    # РџРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє РёСЃС…РѕРґРЅРѕРјСѓ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Сѓ
+    # Полный путь к исходному торрент-файлу
     source_torrent_file_path = os.path.join(download_folder, torrent_file)
 
-    # РџРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє РЅРѕРІРѕРјСѓ, РїРµСЂРµРёРјРµРЅРѕРІР°РЅРЅРѕРјСѓ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Сѓ
+    # Полный путь к новому, переименованному торрент-файлу
     destination_torrent_file_path = os.path.join(subdirectory_path, new_name_torrent_file)
 
     try:
-        # РљРѕРїРёСЂСѓРµРј С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р» Рё РїРµСЂРµРёРјРµРЅРѕРІС‹РІР°РµРј РµРіРѕ
+        # Копируем торрент-файл и переименовываем его
         shutil.copy2(source_torrent_file_path, destination_torrent_file_path)
-        my_print(MY_LOG, f'РўРѕСЂСЂРµРЅС‚-С„Р°Р№Р» СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ Рё РїРµСЂРµРёРјРµРЅРѕРІР°РЅ:\n`{new_name_torrent_file}`')
+        my_print(MY_LOG, f'Торрент-файл успешно загружен и переименован:\n`{new_name_torrent_file}`')
 
         result = {"torrent": new_name_torrent_file,
                   "path_torrent": subdirectory
                   # "path_torrent": destination_torrent_file_path
                   }
 
-        # Р’С‹Р·РѕРІРёРј С„СѓРЅРєС†РёСЋ РґР»СЏ СѓРґР°Р»РµРЅРёСЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕРіРѕ С„Р°Р№Р»Р°
-        # РІ РїР°РїРєРµ Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»РѕРІ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, Р±СЂР°СѓР·РµСЂРѕРІ СЃРёСЃС‚РµРјС‹ windows
+        # Вызовим функцию для удаления загруженного файла
+        # в папке загрузки файлов по умолчанию, браузеров системы windows
         delete_file(download_folder, torrent_file)
 
         return result
 
     except Exception as e:
-        print(f'РћС€РёР±РєР° РїСЂРё РєРѕРїРёСЂРѕРІР°РЅРёРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»Р°: {e}')
+        print(f'Ошибка при копировании торрент-файла: {e}')
         return None
 
 
-
-
-
-
-''' РћР±С‰Р°СЏ С„СѓРЅРєС†РёСЏ С„РёРєСЃР°С†РёРё С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ РІ Р‘Р”.
-РџСЂРёРЅРёРјР°РµС‚ РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє Set JSON-С„Р°Р№Р»Сѓ, С„РѕСЂРјРёСЂСѓРµС‚ СЃРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№
-РїРѕРґР»РµР¶Р°С‰РёР№ РѕР±СЂР°Р±РѕС‚РєРµ С„СѓРЅРєС†РёРµР№ ???
+''' Общая функция фиксации торрент-файлов в БД.
+Принимает полный путь к Set JSON-файлу, формирует список словарей
+подлежащий обработке функцией ???
 '''
 def general_functions_torrent_db(path_SetJson_download_package):
-    # РџРѕР»СѓС‡РёРј СЃРѕРґРµСЂР¶РёРјРѕРµ РёСЃС…РѕРґРЅРѕРіРѕ JSON-С„Р°Р№Р»Р° РІ РІРёРґРµ СЃРїРёСЃРєР° СЃР»РѕРІР°СЂРµР№
+    # Получим содержимое исходного JSON-файла в виде списка словарей
     list_dict_json_Set = read_json_file(path_SetJson_download_package)
-    # Р•СЃР»Рё РЅРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ РёСЃС…РѕРґРЅС‹Р№ JSON-С„Р°Р№Р»
+    # Если не получилось прочитать исходный JSON-файл
     if list_dict_json_Set is None:
-        print('РќРµСѓРґР°С‡РЅР°СЏ РїРѕРїС‹С‚РєР° РѕС‚РєСЂС‹С‚СЊ Рё РїСЂРѕС‡РёС‚Р°С‚СЊ JSON С„Р°Р№Р».\nР’С‹С…РѕРґ')
-        sys.exit()  # Р’С‹С…РѕРґРёРј РёР· РїСЂРѕРіСЂР°РјРјС‹
-    my_print(MY_LOG, f'РљРѕР»РёС‡РµСЃС‚РІРѕ СЃР»РѕРІР°СЂРµР№ РІ Set~.json: {len(list_dict_json_Set)}\n')
+        print('Неудачная попытка открыть и прочитать JSON файл.\nВыход')
+        sys.exit()  # Выходим из программы
+    my_print(MY_LOG, f'Количество словарей в Set~.json: {len(list_dict_json_Set)}\n')
 
-    # РќР°С‡РёРЅР°РµРј СЂРµРіРµСЃС‚СЂРёСЂРѕРІР°С‚СЊ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»С‹ РІ Р‘Р”
-    # РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє Р±Р°Р·Рµ РґР°РЅРЅС‹С…
+    # Начинаем регестрировать торрент-файлы в БД
+    # Подключение к базе данных
     conn = sqlite3.connect("book_database.db")
     cursor = conn.cursor()
 
-    # РЎС‡РµС‚С‡РёРєРё
+    # Счетчики
     successful_attempts = 0
     failed_attempts = 0
 
@@ -481,78 +501,78 @@ def general_functions_torrent_db(path_SetJson_download_package):
         link = record.get("link")
         torrent = record.get("torrent")
 
-        # РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ Р·Р°РїРёСЃРё СЃ С‚Р°РєРёРј РєР»СЋС‡РѕРј РёР»Рё С‚РѕСЂСЂРµРЅС‚РѕРј
+        # Проверяем наличие записи с таким ключом или торрентом
         cursor.execute('SELECT * FROM torrent WHERE link = ? OR torrent = ?', (link, torrent))
         existing_record = cursor.fetchone()
 
         if existing_record:
-            # РћРїСЂРµРґРµР»СЏРµРј, РєР°РєРѕРµ РїРѕР»Рµ РІС‹Р·РІР°Р»Рѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ
+            # Определяем, какое поле вызвало дублирование
             duplicate_field = "link" if existing_record[1] == link else "torrent"
-            print(f'Р—Р°РїРёСЃСЊ СЃ РґСѓР±Р»РёСЂСѓСЋС‰РёРј Р·РЅР°С‡РµРЅРёРµРј РїРѕР»СЏ {duplicate_field} ({existing_record[1]})\n'
-                  f'СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚. РџСЂРѕРїСѓСЃРєР°РµРј РґРѕР±Р°РІР»РµРЅРёРµ РІ С‚Р°Р±Р»РёС†Сѓ "torrent".\n')
+            print(f'Запись с дублирующим значением поля {duplicate_field} ({existing_record[1]})\n'
+                  f'уже существует. Пропускаем добавление в таблицу "torrent".\n')
             failed_attempts += 1
             continue
         else:
-            # Р’СЃС‚Р°РІР»СЏРµРј РЅРѕРІСѓСЋ Р·Р°РїРёСЃСЊ, С‚Р°Рє РєР°Рє Р·Р°РїРёСЃРё СЃ С‚Р°РєРёРј РєР»СЋС‡РѕРј РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+            # Вставляем новую запись, так как записи с таким ключом не существует
             cursor.execute('''
                 INSERT INTO torrent (link, torrent_old, torrent, path_torrent)
                 VALUES (?, ?, ?, ?)
             ''', (link, record.get("torrent_old"), torrent, record.get("path_torrent")))
             successful_attempts += 1
 
-    # РЎРѕС…СЂР°РЅСЏРµРј РёР·РјРµРЅРµРЅРёСЏ Рё Р·Р°РєСЂС‹РІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ
+    # Сохраняем изменения и закрываем соединение
     conn.commit()
     conn.close()
 
-    # Р’С‹РІРѕРґРёРј СЃРѕРѕР±С‰РµРЅРёСЏ
-    print(f'РЈСЃРїРµС€РЅРѕ РґРѕР±Р°РІР»РµРЅРѕ Р·Р°РїРёСЃРµР№ РІ db: {successful_attempts}')
-    print(f'РќРµСѓРґР°С‡РЅС‹С… РїРѕРїС‹С‚РѕРє РґРѕР±Р°РІР»РµРЅРёСЏ РІ db: {failed_attempts}')
-    print(f'Р’СЃРµРіРѕ РїРѕРїС‹С‚РѕРє РґРѕР±Р°РІР»РµРЅРёСЏ РІ db: {successful_attempts + failed_attempts}')
+    # Выводим сообщения
+    print(f'Успешно добавлено записей в db: {successful_attempts}')
+    print(f'Неудачных попыток добавления в db: {failed_attempts}')
+    print(f'Всего попыток добавления в db: {successful_attempts + failed_attempts}')
 
 
 def compare_torrent_files_with_database(directory_path, database_path):
-    # РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РїРѕРґРґРёСЂРµРєС‚РѕСЂРёР№ РІ Downloads_torrent
+    # Получить список поддиректорий в Downloads_torrent
     subdirectories = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
 
-    # РџРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ Рє Р±Р°Р·Рµ РґР°РЅРЅС‹С… SQLite
+    # Подключиться к базе данных SQLite
     conn = sqlite3.connect(database_path)
     cursor = conn.cursor()
 
     for subdirectory in subdirectories:
         subdirectory_path = os.path.join(directory_path, subdirectory)
 
-        # РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє С„Р°Р№Р»РѕРІ РІ РїРѕРґРґРёСЂРµРєС‚РѕСЂРёРё
+        # Получить список файлов в поддиректории
         files_in_directory = [f for f in os.listdir(subdirectory_path) if os.path.isfile(os.path.join(subdirectory_path, f))]
 
-        # SQL-Р·Р°РїСЂРѕСЃ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СЃРїРёСЃРєР° РёРјРµРЅ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ РґР»СЏ РґР°РЅРЅРѕР№ РїРѕРґРґРёСЂРµРєС‚РѕСЂРёРё
+        # SQL-запрос для получения списка имен торрент-файлов для данной поддиректории
         sql_query = f"SELECT path_torrent, torrent FROM torrent WHERE path_torrent = ?"
         cursor.execute(sql_query, (subdirectory,))
 
-        # РџРѕР»СѓС‡РёС‚СЊ СЂРµР·СѓР»СЊС‚Р°С‚ Р·Р°РїСЂРѕСЃР°
+        # Получить результат запроса
         database_files = cursor.fetchall()
 
-        # РЎСЂР°РІРЅРёС‚СЊ РґРІР° СЃРїРёСЃРєР° РёРјРµРЅ С‚РѕСЂСЂРµРЅС‚-С„Р°Р№Р»РѕРІ
+        # Сравнить два списка имен торрент-файлов
         compare_files(files_in_directory, database_files, subdirectory)
 
-    # Р—Р°РєСЂС‹С‚СЊ СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…
+    # Закрыть соединение с базой данных
     conn.close()
 
 
 def compare_files(files_in_directory, database_files, subdirectory):
     global MY_LOG
-    # РќР°Р№С‚Рё РЅРµСѓС‡С‚РµРЅРЅС‹Рµ С„Р°Р№Р»С‹
+    # Найти неучтенные файлы
     unaccounted_files = set(files_in_directory) - set(file[1] for file in database_files)
     if unaccounted_files:
-        my_print(MY_LOG, f"!!! РќРµСѓС‡С‚РµРЅРЅС‹Рµ С„Р°Р№Р»С‹ РІ РїРѕРґРґРёСЂРµРєС‚РѕСЂРёРё: {subdirectory}/{', '.join(unaccounted_files)}")
+        my_print(MY_LOG, f"!!! Неучтенные файлы в поддиректории: {subdirectory}/{', '.join(unaccounted_files)}")
     else:
-        my_print(MY_LOG, f"Р’СЃРµ С„Р°Р№Р»С‹ РІ РїРѕРґРґРёСЂРµРєС‚РѕСЂРёРё {subdirectory} СѓС‡С‚РµРЅС‹")
+        my_print(MY_LOG, f"Все файлы в поддиректории {subdirectory} учтены")
 
-    # РќР°Р№С‚Рё РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёРµ Р·Р°РїРёСЃРё РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С…
+    # Найти отсутствующие записи в базе данных
     missing_records = set(file[1] for file in database_files) - set(files_in_directory)
     if missing_records:
-        my_print(MY_LOG, f"!!! РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‚ С„Р°Р№Р»С‹  {subdirectory} / {', '.join(missing_records)} РґР»СЏ Р·Р°РїРёСЃРµР№ РІ *.bd")
+        my_print(MY_LOG, f"!!! Отсутствуют файлы  {subdirectory} / {', '.join(missing_records)} для записей в *.bd")
     else:
-        my_print(MY_LOG, f"Р’СЃРµ Р·Р°РїРёСЃРё РІ *.bd РґР»СЏ РїРѕРґРґРёСЂРµРєС‚РѕСЂРёРё {subdirectory} РёРјРµСЋС‚ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёРµ С„Р°Р№Р»С‹")
+        my_print(MY_LOG, f"Все записи в *.bd для поддиректории {subdirectory} имеют соответствующие файлы")
     my_print(MY_LOG, '----------')
 
 

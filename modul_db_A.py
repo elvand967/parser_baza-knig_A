@@ -72,27 +72,9 @@ def new_bd_end_tab(database):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS books (
             id INTEGER PRIMARY KEY,
-            publication_date TEXT,
             title TEXT(250),
             link TEXT UNIQUE,
-            author TEXT,
-            reader TEXT,
-            year TEXT,
-            duration TEXT,
-            quality TEXT,
-            series TEXT,
-            size TEXT,
-            genre TEXT,
-            description TEXT(5000),
-            image_file TEXT UNIQUE,
-            plot REAL,
-            writing_talent REAL,
-            characters REAL,
-            voice_quality REAL,
-            like INTEGER,
-            dislike INTEGER,
-            comments INTEGER,
-            rating REAL
+            there_torrent INTEGER
         )
     ''')
 
