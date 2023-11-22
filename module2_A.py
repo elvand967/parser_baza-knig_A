@@ -9,6 +9,11 @@ URL которых полученны из book_database.db books (link).
 Лог-файлы пишем с помощью функции my_print(name_path, text)
 
 '''
+
+
+
+
+
 import json
 import os
 import shutil
@@ -219,9 +224,10 @@ def create_json_with_no_torrent(path_dir_Get):
         WHERE 
             books.id >= ? AND books.id <= ? AND 
             (torrent.link IS NULL OR torrent.torrent IS NULL OR torrent.torrent = "Null") AND
-            books.there_torrent = 1
+            books.there_torrent = ?
         ''',
-        (n, m))
+        (n, m, 1))
+
 
     # Извлекаем выбранные строки
     rows = cursor.fetchall()
@@ -564,6 +570,7 @@ def compare_files(files_in_directory, database_files, subdirectory):
     unaccounted_files = set(files_in_directory) - set(file[1] for file in database_files)
     if unaccounted_files:
         my_print(MY_LOG, f"!!! Неучтенные файлы в поддиректории: {subdirectory}/{', '.join(unaccounted_files)}")
+
     else:
         my_print(MY_LOG, f"Все файлы в поддиректории {subdirectory} учтены")
 
@@ -574,6 +581,71 @@ def compare_files(files_in_directory, database_files, subdirectory):
     else:
         my_print(MY_LOG, f"Все записи в *.bd для поддиректории {subdirectory} имеют соответствующие файлы")
     my_print(MY_LOG, '----------')
+
+
+
+
+
+
+
+
+
+
+
+# MY_LOG = "my_log.json"
+#
+# def my_print(log_file, message):
+#     with open(log_file, 'a') as log:
+#         log.write(message + '\n')
+#
+# def compare_torrent_files_with_database(directory_path, database_path):
+#     subdirectories = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
+#     conn = sqlite3.connect(database_path)
+#     cursor = conn.cursor()
+#
+#     unaccounted_files_info = []
+#     missing_records_info = []
+#
+#     for subdirectory in subdirectories:
+#         subdirectory_path = os.path.join(directory_path, subdirectory)
+#         files_in_directory = [f for f in os.listdir(subdirectory_path) if os.path.isfile(os.path.join(subdirectory_path, f))]
+#
+#         sql_query = f"SELECT path_torrent, torrent FROM torrent WHERE path_torrent = ?"
+#         cursor.execute(sql_query, (subdirectory,))
+#         database_files = cursor.fetchall()
+#
+#         unaccounted_files = set(files_in_directory) - set(file[1] for file in database_files)
+#         if unaccounted_files:
+#             unaccounted_files_info.append({"subdirectory": subdirectory, "files": list(unaccounted_files)})
+#
+#         missing_records = set(file[1] for file in database_files) - set(files_in_directory)
+#         if missing_records:
+#             missing_records_info.append({"subdirectory": subdirectory, "files": list(missing_records)})
+#
+#     conn.close()
+#
+#     if unaccounted_files_info:
+#         my_print(MY_LOG, "!!! Неучтенные файлы:")
+#         my_print(MY_LOG, json.dumps(unaccounted_files_info, indent=2))
+#         user_choice = input("Удалить неучтенные файлы? (y/n): ")
+#         if user_choice.lower() == 'y':
+#             # Удаление файлов
+#             pass
+#
+#     if missing_records_info:
+#         my_print(MY_LOG, "!!! Отсутствующие записи в базе данных:")
+#         my_print(MY_LOG, json.dumps(missing_records_info, indent=2))
+#         user_choice = input("Удалить отсутствующие записи? (y/n): ")
+#         if user_choice.lower() == 'y':
+#             # Удаление записей в базе данных
+#             pass
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":

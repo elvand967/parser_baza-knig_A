@@ -161,7 +161,7 @@ def delete_file(file_path, file_name):
     try:
         # Удаляем файл
         os.remove(full_path)
-        # print(f'Файл `{file_name}` успешно удален.')
+        print(f'Файл `{file_name}` успешно удален.')
     except FileNotFoundError:
         print(f'Файл {full_path} не найден.')
     except PermissionError:
